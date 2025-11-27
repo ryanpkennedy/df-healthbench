@@ -21,7 +21,8 @@ Route (endpoint) → Service (business logic) → CRUD (DB operations) → Datab
 
 - Python 3.11 or 3.12
 - Poetry (Python dependency management)
-- PostgreSQL (local or Docker)
+- Docker & Docker Compose (for local database)
+- Make (for database management commands)
 
 ## Installation
 
@@ -38,44 +39,57 @@ cd backend
 poetry install
 ```
 
-### 3. Set up PostgreSQL
+### 3. Set up PostgreSQL Database
 
-**Option A: Local PostgreSQL**
+The project uses Docker Compose for local database management.
+
+**Start the database:**
 
 ```bash
-# Install PostgreSQL (macOS)
-brew install postgresql@15
-brew services start postgresql@15
-
-# Create database
-createdb df_db
+# From project root directory
+make db-start
 ```
 
-**Option B: Docker PostgreSQL**
+This will start a PostgreSQL container with the following configuration:
+
+- Host: `localhost`
+- Port: `5432`
+- Database: `df_healthbench`
+- User: `dfuser`
+- Password: `dfpassword`
+
+**Other database commands:**
 
 ```bash
-docker run --name df-postgres \
-  -e POSTGRES_PASSWORD=postgres \
-  -e POSTGRES_DB=df_db \
-  -p 5432:5432 \
-  -d postgres:15
+make db-stop      # Stop the database
+make db-restart   # Restart the database
+make db-logs      # View database logs
+make db-clean     # Stop and remove all data (WARNING: destructive)
 ```
 
 ### 4. Configure Environment
 
 ```bash
-# Copy example env file
+# Copy example env file (from backend directory)
 cp .env.example .env
 
-# Edit .env with your configuration
-# Update DATABASE_URL if needed
+# The .env file is pre-configured to work with the Docker database
+# You can edit .env if you need to change any settings
 ```
 
 ## Running the Application
 
+### Start Database (if not already running)
+
+```bash
+# From project root
+make db-start
+```
+
 ### Development Server
 
 ```bash
+# From backend directory
 poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
@@ -184,15 +198,14 @@ Navigate to http://localhost:8000/docs for interactive API testing.
 
 ## Environment Variables
 
-| Variable         | Description                  | Default                                               |
-| ---------------- | ---------------------------- | ----------------------------------------------------- |
-| `DATABASE_URL`   | PostgreSQL connection string | `postgresql://postgres:postgres@localhost:5432/df_db` |
-| `API_TITLE`      | API title for docs           | `DF HealthBench API`                                  |
-| `API_VERSION`    | API version                  | `1.0.0`                                               |
-| `OPENAI_API_KEY` | OpenAI API key (Part 2+)     | -                                                     |
-| `HOST`           | Server host                  | `0.0.0.0`                                             |
-| `PORT`           | Server port                  | `8000`                                                |
-| `DEBUG`          | Debug mode                   | `True`                                                |
+| Variable          | Description                  | Default                                                        |
+| ----------------- | ---------------------------- | -------------------------------------------------------------- |
+| `DATABASE_URL`    | PostgreSQL connection string | `postgresql://dfuser:dfpassword@localhost:5432/df_healthbench` |
+| `API_TITLE`       | API title for docs           | `DF HealthBench API`                                           |
+| `API_VERSION`     | API version                  | `1.0.0`                                                        |
+| `API_DESCRIPTION` | API description              | `AI-powered medical document processing API`                   |
+| `ENVIRONMENT`     | Environment mode             | `development`                                                  |
+| `OPENAI_API_KEY`  | OpenAI API key (Part 2+)     | -                                                              |
 
 ## Next Steps
 
