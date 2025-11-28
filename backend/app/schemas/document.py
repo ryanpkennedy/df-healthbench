@@ -56,6 +56,15 @@ class DocumentResponse(DocumentBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+class DocumentDeleteResponse(BaseModel):
+    """
+    Schema for document deletion responses (DELETE requests).
+    """
+    success: bool = Field(..., description="Success flag")
+    message: str = Field(..., description="Success message")
+    document_id: int = Field(..., description="Document identifier")
+    deleted_at: datetime = Field(..., description="Deletion timestamp")
+
 
 class DocumentListResponse(BaseModel):
     """

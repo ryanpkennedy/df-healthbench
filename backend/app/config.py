@@ -7,6 +7,16 @@ from environment variables.
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
+import logging
+import os
+
+# Configure logging immediately so config logs appear
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -23,6 +33,13 @@ class Settings(BaseSettings):
     # Environment
     environment: Literal["development", "production", "test"] = "development"
     
+    # OpenAI Configuration
+    openai_api_key: str
+    openai_api_project: str | None = None
+    openai_default_model: str = "gpt-5-nano"
+    openai_temperature: float = 1
+    openai_timeout: int = 30  # seconds
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -33,4 +50,24 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
+
+# IMPORTANT: Explicitly unset OPENAI_PROJECT to prevent OpenAI SDK from auto-detecting it to avoid "mismatched_project" errors
+if 'OPENAI_PROJECT' in os.environ:
+    logger.warning(f"Removing OPENAI_PROJECT from environment to avoid mismatched_project error")
+    del os.environ['OPENAI_PROJECT']
+
+if 'OPENAI_API_PROJECT' in os.environ:
+    logger.warning(f"Removing OPENAI_API_PROJECT from environment to avoid mismatched_project error")
+    del os.environ['OPENAI_API_PROJECT']
+
+# Debug logging for OpenAI configuration
+logger.info("=" * 60)
+logger.info("OpenAI Configuration Loaded:")
+logger.info(f"  API Key: {'*' * 8}{settings.openai_api_key[-4:] if settings.openai_api_key else 'NOT SET'}")
+logger.info(f"  Project ID: {settings.openai_api_project if settings.openai_api_project else 'NOT SET (Optional)'}")
+logger.info(f"  Project ID in ENV: {'REMOVED' if 'OPENAI_PROJECT' not in os.environ else 'STILL SET'}")
+logger.info(f"  Default Model: {settings.openai_default_model}")
+logger.info(f"  Temperature: {settings.openai_temperature}")
+logger.info(f"  Timeout: {settings.openai_timeout}s")
+logger.info("=" * 60)
 

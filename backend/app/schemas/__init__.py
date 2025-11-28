@@ -10,11 +10,21 @@ from app.schemas.document import (
     DocumentResponse,
     DocumentListResponse,
 )
+from app.schemas.llm import (
+    SummarizeRequest,
+    SummarizeResponse,
+    TokenUsage,
+    ErrorResponse,
+)
 
 __all__ = [
     "DocumentBase",
     "DocumentCreate",
     "DocumentResponse",
     "DocumentListResponse",
+    "SummarizeRequest",
+    "SummarizeResponse",
+    "TokenUsage",
+    "ErrorResponse",
 ]
 
