@@ -24,6 +24,15 @@ from app.schemas.rag import (
     EmbedAllResponse,
     RAGStatsResponse,
 )
+from app.schemas.extraction import (
+    PatientInfo,
+    VitalSigns,
+    DiagnosisCode,
+    MedicationCode,
+    StructuredClinicalData,
+    ExtractionRequest,
+    ExtractionResponse,
+)
 
 __all__ = [
     "DocumentBase",
@@ -40,5 +49,12 @@ __all__ = [
     "EmbedDocumentResponse",
     "EmbedAllResponse",
     "RAGStatsResponse",
+    "PatientInfo",
+    "VitalSigns",
+    "DiagnosisCode",
+    "MedicationCode",
+    "StructuredClinicalData",
+    "ExtractionRequest",
+    "ExtractionResponse",
 ]
 

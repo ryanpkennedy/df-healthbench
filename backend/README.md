@@ -48,7 +48,9 @@ poetry run uvicorn app.main:app --reload
 - **ORM:** SQLAlchemy 2.0
 - **Validation:** Pydantic 2.0
 - **LLM:** OpenAI API (GPT + Embeddings)
+- **Agents:** OpenAI Agents SDK
 - **Vector Search:** PGVector extension
+- **External APIs:** NLM Clinical Tables (ICD-10-CM), NLM RxNav (RxNorm)
 - **Environment:** Poetry
 
 ### Application Structure
@@ -425,6 +427,62 @@ Generate embeddings for all documents (runs automatically on first startup).
 
 ---
 
+#### Agent Extraction
+
+```http
+POST /agent/extract_structured
+Content-Type: application/json
+
+{
+  "text": "Subjective: 45yo male with Type 2 Diabetes...\n\nObjective: BP 130/85..."
+}
+```
+
+Extract structured clinical data from medical notes using AI agents.
+
+**Features:**
+- Extracts diagnoses, medications, vital signs, labs, and plans
+- Enriches diagnoses with ICD-10-CM codes (NLM Clinical Tables API)
+- Enriches medications with RxNorm codes (NLM RxNav API)
+- Returns validated Pydantic models
+
+**Response:**
+
+```json
+{
+  "patient_info": {"age": "45", "gender": "male"},
+  "diagnoses": [
+    {
+      "text": "Type 2 Diabetes Mellitus",
+      "icd10_code": "E11.9",
+      "icd10_description": "Type 2 diabetes mellitus without complications",
+      "confidence": "exact"
+    }
+  ],
+  "medications": [
+    {
+      "text": "Metformin 500mg",
+      "rxnorm_code": "860975",
+      "rxnorm_name": "Metformin 500 MG Oral Tablet",
+      "confidence": "exact"
+    }
+  ],
+  "vital_signs": {...},
+  "lab_results": [...],
+  "plan_actions": [...],
+  "processing_time_ms": 12894,
+  "model_used": "gpt-4o-mini"
+}
+```
+
+**Testing:**
+
+```bash
+poetry run python tests/test_agent_extraction_api.py
+```
+
+---
+
 ## LLM Integration
 
 ### OpenAI Setup
@@ -481,14 +539,13 @@ result = llm_service.summarize_note(text)
 
 - Medical note summarization (POST `/llm/summarize_note`)
 - Document summarization by ID (POST `/llm/summarize_document/{id}`)
-- Token usage tracking
-- Processing time metrics
+- RAG question answering (POST `/rag/answer_question`)
+- Agent-based structured data extraction (POST `/agent/extract_structured`)
+- Token usage tracking and processing time metrics
 - Comprehensive error handling (rate limits, timeouts, connection errors)
 
 **Planned:**
 
-- RAG (Retrieval-Augmented Generation) pipeline
-- Structured data extraction
 - FHIR format conversion
 - Multi-model support
 
@@ -736,9 +793,21 @@ poetry run pytest --cov=app
 - [x] Automatic embedding generation on startup
 - [x] RAG statistics endpoint
 
+**Part 4: Agent for Data Extraction**
+
+- [x] OpenAI Agents SDK integration
+- [x] Agent extraction service with singleton pattern
+- [x] Clinical entity extraction (diagnoses, medications, vitals, labs, plans)
+- [x] ICD-10-CM code enrichment (via NLM Clinical Tables API)
+- [x] RxNorm code enrichment (via NLM RxNav API)
+- [x] Structured output with Pydantic validation
+- [x] Extract structured data endpoint (`POST /agent/extract_structured`)
+- [x] Agent health check endpoint
+- [x] Comprehensive error handling and logging
+- [x] Test script for API validation
+
 ### 🚧 Next Steps
 
-- [ ] Part 4: Agent for Data Extraction (ICD codes, RxNorm codes)
 - [ ] Part 5: FHIR Conversion (Patient, Condition, Medication resources)
 - [ ] Part 6: Containerization (Dockerfile, full docker-compose)
 

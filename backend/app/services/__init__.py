@@ -25,6 +25,7 @@ from app.services.embedding import (
 )
 from app.services.chunking import chunk_document, get_chunk_stats
 from app.services.rag import RAGService, RAGServiceError, NoEmbeddingsFoundError
+from app.services.agent_extraction import AgentExtractionService, get_extractor_service
 
 __all__ = [
     "DocumentService",
@@ -47,5 +48,7 @@ __all__ = [
     "RAGService",
     "RAGServiceError",
     "NoEmbeddingsFoundError",
+    "AgentExtractionService",
+    "get_extractor_service",
 ]
 
