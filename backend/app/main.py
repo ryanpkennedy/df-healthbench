@@ -12,7 +12,7 @@ import logging
 
 from app.config import settings
 from app.database import create_tables, check_db_connection
-from app.api.routes import health, documents, llm
+from app.api.routes import health, documents, llm, rag
 
 # Configure logging
 logging.basicConfig(
@@ -51,9 +51,12 @@ async def lifespan(app: FastAPI):
     try:
         from app.seed import seed_database
         logger.info("Checking if database needs seeding...")
-        seed_database(force=False)
+        # Note: seed_database will automatically generate embeddings if documents are created
+        # and no embeddings exist. This happens only on first startup.
+        seed_database(force=False, skip_embeddings=False)
     except Exception as e:
         logger.warning(f"Failed to seed database: {e}")
+        logger.warning("Application will continue, but you may need to manually seed data")
     
     logger.info(f"Environment: {settings.environment}")
     logger.info(f"API Title: {settings.api_title}")
@@ -113,6 +116,7 @@ async def root():
 app.include_router(health.router, tags=["Health"])
 app.include_router(documents.router, prefix="/documents", tags=["Documents"])
 app.include_router(llm.router, prefix="/llm", tags=["LLM"])
+app.include_router(rag.router, prefix="/rag", tags=["RAG"])
 
 if __name__ == "__main__":
     import uvicorn

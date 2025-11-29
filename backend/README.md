@@ -44,10 +44,11 @@ poetry run uvicorn app.main:app --reload
 ### Tech Stack
 
 - **Framework:** FastAPI 0.122+
-- **Database:** PostgreSQL 15
+- **Database:** PostgreSQL 15 with PGVector
 - **ORM:** SQLAlchemy 2.0
 - **Validation:** Pydantic 2.0
-- **LLM:** OpenAI API
+- **LLM:** OpenAI API (GPT + Embeddings)
+- **Vector Search:** PGVector extension
 - **Environment:** Poetry
 
 ### Application Structure
@@ -61,24 +62,31 @@ backend/
 │   ├── seed.py                 # Database seeding script
 │   │
 │   ├── models/                 # SQLAlchemy ORM models
-│   │   └── document.py         # Document table model
+│   │   ├── document.py         # Document table model
+│   │   └── document_embedding.py  # Embedding table model (PGVector)
 │   │
 │   ├── schemas/                # Pydantic validation schemas
 │   │   ├── document.py         # Document request/response schemas
-│   │   └── llm.py              # LLM request/response schemas
+│   │   ├── llm.py              # LLM request/response schemas
+│   │   └── rag.py              # RAG request/response schemas
 │   │
 │   ├── crud/                   # Database operations
-│   │   └── document.py         # Document CRUD queries
+│   │   ├── document.py         # Document CRUD queries
+│   │   └── embedding.py        # Embedding CRUD + vector search
 │   │
 │   ├── services/               # Business logic
 │   │   ├── document.py         # Document service layer
-│   │   └── llm.py              # LLM service layer (OpenAI)
+│   │   ├── llm.py              # LLM service layer (OpenAI)
+│   │   ├── embedding.py        # Embedding generation service
+│   │   ├── chunking.py         # Document chunking utilities
+│   │   └── rag.py              # RAG pipeline orchestration
 │   │
 │   └── api/routes/             # API endpoints
 │       ├── health.py           # Health check endpoints
 │       ├── documents.py        # Document CRUD endpoints
 │       ├── llm.py              # LLM endpoints
-│       └── llm_helpers.py      # Shared LLM utilities
+│       ├── llm_helpers.py      # Shared LLM utilities
+│       └── rag.py              # RAG endpoints
 │
 ├── tests/                      # Test files
 ├── pyproject.toml              # Dependencies
@@ -140,37 +148,67 @@ Password: dfpassword
 
 Stores medical documents (SOAP notes, clinical documents, etc.)
 
-| Column       | Type                      | Description                    |
-| ------------ | ------------------------- | ------------------------------ |
-| `id`         | INTEGER (PK, auto-inc)    | Unique document identifier     |
-| `title`      | VARCHAR(255), NOT NULL    | Document title                 |
-| `content`    | TEXT, NOT NULL            | Full document text             |
-| `created_at` | TIMESTAMP WITH TZ         | Creation timestamp             |
-| `updated_at` | TIMESTAMP WITH TZ         | Last update timestamp          |
+| Column       | Type                   | Description                |
+| ------------ | ---------------------- | -------------------------- |
+| `id`         | INTEGER (PK, auto-inc) | Unique document identifier |
+| `title`      | VARCHAR(255), NOT NULL | Document title             |
+| `content`    | TEXT, NOT NULL         | Full document text         |
+| `created_at` | TIMESTAMP WITH TZ      | Creation timestamp         |
+| `updated_at` | TIMESTAMP WITH TZ      | Last update timestamp      |
 
 **Indexes:**
+
 - Primary key on `id`
 - Index on `title`
 
 **Auto-timestamps:**
+
 - `created_at`: Set on insert
 - `updated_at`: Updated on modification
 
+#### `document_embeddings` Table
+
+Stores vector embeddings for RAG (Retrieval-Augmented Generation)
+
+| Column        | Type                   | Description                    |
+| ------------- | ---------------------- | ------------------------------ |
+| `id`          | INTEGER (PK, auto-inc) | Unique embedding identifier    |
+| `document_id` | INTEGER (FK), NOT NULL | Reference to documents table   |
+| `chunk_index` | INTEGER, NOT NULL      | Index of chunk within document |
+| `chunk_text`  | TEXT, NOT NULL         | Text content of the chunk      |
+| `embedding`   | VECTOR(1536), NOT NULL | Vector embedding (PGVector)    |
+| `created_at`  | TIMESTAMP WITH TZ      | Creation timestamp             |
+
+**Indexes:**
+
+- Primary key on `id`
+- Foreign key on `document_id` (CASCADE delete)
+- Composite index on `(document_id, chunk_index)`
+- Vector index for similarity search
+
+**Vector Search:**
+
+- Uses PGVector's cosine distance operator (`<=>`)
+- 1536 dimensions (text-embedding-3-small model)
+
 ### Seeding
 
-The application automatically seeds SOAP notes on startup if the database is empty.
+The application automatically seeds SOAP notes and generates embeddings on startup if the database is empty.
 
 **Manual seeding:**
 
 ```bash
-# Seed only if empty
+# Seed documents and generate embeddings
 poetry run python -m app.seed
 
-# Force seed (overwrites existing data)
+# Seed documents only (skip embeddings)
+poetry run python -m app.seed --skip-embeddings
+
+# Force re-seed everything
 poetry run python -m app.seed --force
 ```
 
-SOAP notes are loaded from `../soap/*.txt` files.
+SOAP notes are loaded from `../soap/*.txt` files. Embeddings are generated automatically using OpenAI's `text-embedding-3-small` model.
 
 ---
 
@@ -220,6 +258,7 @@ GET /documents
 List all document IDs with count.
 
 **Response:**
+
 ```json
 {
   "document_ids": [1, 2, 3, 4, 5, 6],
@@ -258,6 +297,7 @@ GET /documents/list/all?skip=0&limit=100
 Get all documents with full details (paginated).
 
 **Query Parameters:**
+
 - `skip` (int, default: 0): Number of records to skip
 - `limit` (int, default: 100): Max records to return
 
@@ -284,6 +324,7 @@ Content-Type: application/json
 Summarize medical note text using LLM.
 
 **Response:**
+
 ```json
 {
   "summary": "**Chief Complaint:** 45-year-old male with chest pain...",
@@ -298,6 +339,7 @@ Summarize medical note text using LLM.
 ```
 
 **Status Codes:**
+
 - `200`: Success
 - `400`: Invalid input (empty/too short text)
 - `500`: LLM API error
@@ -314,11 +356,72 @@ Fetch a document from the database and summarize it.
 **Response:** Same as `/llm/summarize_note`
 
 **Status Codes:**
+
 - `200`: Success
 - `400`: Invalid document content
 - `404`: Document not found
 - `500`: LLM API error
 - `503`: Service unavailable
+
+---
+
+#### RAG Operations
+
+```http
+GET /rag/stats
+```
+
+Get RAG system statistics (embeddings count, configuration, etc.)
+
+---
+
+```http
+POST /rag/answer_question
+Content-Type: application/json
+
+{
+  "question": "What medications are mentioned?",
+  "top_k": 3,  // optional, default: 3
+  "similarity_threshold": 0.7  // optional
+}
+```
+
+Answer a question using RAG (Retrieval-Augmented Generation).
+
+**Response:**
+
+```json
+{
+  "answer": "Based on the documents, metformin is mentioned...",
+  "sources": [
+    {
+      "document_id": 1,
+      "document_title": "SOAP Note 01",
+      "chunk_text": "...",
+      "similarity_score": 0.85
+    }
+  ],
+  "model_used": "gpt-5-nano",
+  "token_usage": {...},
+  "processing_time_ms": 2100
+}
+```
+
+---
+
+```http
+POST /rag/embed_document/{document_id}
+```
+
+Generate embeddings for a single document.
+
+---
+
+```http
+POST /rag/embed_all
+```
+
+Generate embeddings for all documents (runs automatically on first startup).
 
 ---
 
@@ -366,6 +469,7 @@ result = llm_service.summarize_note(text)
 ```
 
 **Benefits:**
+
 - ✅ OpenAI client initialized once
 - ✅ Connection pooling enabled
 - ✅ Thread-safe for concurrent requests
@@ -374,6 +478,7 @@ result = llm_service.summarize_note(text)
 ### Features
 
 **Current:**
+
 - Medical note summarization (POST `/llm/summarize_note`)
 - Document summarization by ID (POST `/llm/summarize_document/{id}`)
 - Token usage tracking
@@ -381,6 +486,7 @@ result = llm_service.summarize_note(text)
 - Comprehensive error handling (rate limits, timeouts, connection errors)
 
 **Planned:**
+
 - RAG (Retrieval-Augmented Generation) pipeline
 - Structured data extraction
 - FHIR format conversion
@@ -517,18 +623,18 @@ OPENAI_TIMEOUT=30
 
 ### Configuration Reference
 
-| Variable               | Description                 | Default                                           | Required |
-| ---------------------- | --------------------------- | ------------------------------------------------- | -------- |
-| `DATABASE_URL`         | PostgreSQL connection       | `postgresql://dfuser:...@localhost:5432/df_...`   | Yes      |
-| `API_TITLE`            | API title for docs          | `DF HealthBench API`                              | No       |
-| `API_VERSION`          | API version                 | `1.0.0`                                           | No       |
-| `API_DESCRIPTION`      | API description             | `AI-powered medical document processing API`      | No       |
-| `ENVIRONMENT`          | Environment mode            | `development`                                     | No       |
-| `OPENAI_API_KEY`       | OpenAI API key              | -                                                 | Yes      |
-| `OPENAI_API_PROJECT`   | OpenAI project ID           | -                                                 | No       |
-| `OPENAI_DEFAULT_MODEL` | Default LLM model           | `gpt-5-nano`                                      | No       |
-| `OPENAI_TEMPERATURE`   | LLM temperature (0.0-2.0)   | `1.0`                                             | No       |
-| `OPENAI_TIMEOUT`       | API timeout (seconds)       | `30`                                              | No       |
+| Variable               | Description               | Default                                         | Required |
+| ---------------------- | ------------------------- | ----------------------------------------------- | -------- |
+| `DATABASE_URL`         | PostgreSQL connection     | `postgresql://dfuser:...@localhost:5432/df_...` | Yes      |
+| `API_TITLE`            | API title for docs        | `DF HealthBench API`                            | No       |
+| `API_VERSION`          | API version               | `1.0.0`                                         | No       |
+| `API_DESCRIPTION`      | API description           | `AI-powered medical document processing API`    | No       |
+| `ENVIRONMENT`          | Environment mode          | `development`                                   | No       |
+| `OPENAI_API_KEY`       | OpenAI API key            | -                                               | Yes      |
+| `OPENAI_API_PROJECT`   | OpenAI project ID         | -                                               | No       |
+| `OPENAI_DEFAULT_MODEL` | Default LLM model         | `gpt-5-nano`                                    | No       |
+| `OPENAI_TEMPERATURE`   | LLM temperature (0.0-2.0) | `1.0`                                           | No       |
+| `OPENAI_TIMEOUT`       | API timeout (seconds)     | `30`                                            | No       |
 
 ---
 
@@ -557,6 +663,14 @@ curl -X POST http://localhost:8000/llm/summarize_note \
 
 # Summarize document by ID
 curl -X POST http://localhost:8000/llm/summarize_document/1
+
+# RAG: Answer question
+curl -X POST http://localhost:8000/rag/answer_question \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What medications are mentioned?"}'
+
+# RAG: Get stats
+curl http://localhost:8000/rag/stats
 ```
 
 **Using Swagger UI:**
@@ -584,6 +698,7 @@ poetry run pytest --cov=app
 ### ✅ Completed Features
 
 **Part 1: Backend Foundation**
+
 - [x] FastAPI application setup
 - [x] PostgreSQL database with Docker
 - [x] SQLAlchemy ORM models
@@ -598,6 +713,7 @@ poetry run pytest --cov=app
 - [x] API documentation (Swagger/ReDoc)
 
 **Part 2: LLM Integration**
+
 - [x] OpenAI SDK integration
 - [x] LLM service layer with singleton pattern
 - [x] Medical note summarization endpoint
@@ -607,9 +723,21 @@ poetry run pytest --cov=app
 - [x] Comprehensive error handling (rate limits, timeouts, etc.)
 - [x] Reusable error handling decorator
 
+**Part 3: RAG Pipeline**
+
+- [x] PGVector extension integration
+- [x] Document embedding model (vector storage)
+- [x] Embedding service (OpenAI text-embedding-3-small)
+- [x] Document chunking utility (SOAP-aware)
+- [x] Vector similarity search (cosine distance)
+- [x] RAG service layer (retrieval + generation)
+- [x] Question answering endpoint with source citations
+- [x] Embedding management endpoints
+- [x] Automatic embedding generation on startup
+- [x] RAG statistics endpoint
+
 ### 🚧 Next Steps
 
-- [ ] Part 3: RAG Pipeline (vector embeddings, semantic search)
 - [ ] Part 4: Agent for Data Extraction (ICD codes, RxNorm codes)
 - [ ] Part 5: FHIR Conversion (Patient, Condition, Medication resources)
 - [ ] Part 6: Containerization (Dockerfile, full docker-compose)
@@ -619,6 +747,7 @@ poetry run pytest --cov=app
 ## Troubleshooting
 
 **Database connection failed:**
+
 ```bash
 # Ensure PostgreSQL is running
 make db-start
@@ -629,6 +758,7 @@ make db-logs
 ```
 
 **Application won't start:**
+
 ```bash
 # Check Poetry environment
 poetry env info
@@ -641,6 +771,7 @@ python --version
 ```
 
 **OpenAI API errors:**
+
 ```bash
 # Verify API key is set
 grep OPENAI_API_KEY .env
@@ -653,6 +784,7 @@ curl https://api.openai.com/v1/models \
 ```
 
 **Seeding fails:**
+
 ```bash
 # Ensure ../soap/ directory exists with SOAP note files
 ls ../soap/

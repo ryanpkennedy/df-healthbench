@@ -16,6 +16,14 @@ from app.schemas.llm import (
     TokenUsage,
     ErrorResponse,
 )
+from app.schemas.rag import (
+    QuestionRequest,
+    SourceChunk,
+    AnswerResponse,
+    EmbedDocumentResponse,
+    EmbedAllResponse,
+    RAGStatsResponse,
+)
 
 __all__ = [
     "DocumentBase",
@@ -26,5 +34,11 @@ __all__ = [
     "SummarizeResponse",
     "TokenUsage",
     "ErrorResponse",
+    "QuestionRequest",
+    "SourceChunk",
+    "AnswerResponse",
+    "EmbedDocumentResponse",
+    "EmbedAllResponse",
+    "RAGStatsResponse",
 ]
 

@@ -67,7 +67,7 @@ def create_tables() -> None:
     """
     # Import all models here to ensure they are registered with SQLAlchemy
     # before creating tables
-    from app.models import Document  # noqa: F401
+    from app.models import Document, DocumentEmbedding  # noqa: F401
     
     logger.info("Creating database tables...")
     Base.metadata.create_all(bind=engine)

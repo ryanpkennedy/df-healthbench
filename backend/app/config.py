@@ -40,6 +40,15 @@ class Settings(BaseSettings):
     openai_temperature: float = 1
     openai_timeout: int = 30  # seconds
     
+    # OpenAI Embedding Configuration
+    openai_embedding_model: str = "text-embedding-3-small"
+    embedding_dimension: int = 1536  # text-embedding-3-small dimensions
+    
+    # RAG Configuration
+    chunk_size: int = 800  # Target chunk size in characters
+    chunk_overlap: int = 50  # Overlap between chunks for context
+    rag_top_k: int = 3  # Number of chunks to retrieve for RAG
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -69,5 +78,12 @@ logger.info(f"  Project ID in ENV: {'REMOVED' if 'OPENAI_PROJECT' not in os.envi
 logger.info(f"  Default Model: {settings.openai_default_model}")
 logger.info(f"  Temperature: {settings.openai_temperature}")
 logger.info(f"  Timeout: {settings.openai_timeout}s")
+logger.info(f"  Embedding Model: {settings.openai_embedding_model}")
+logger.info(f"  Embedding Dimension: {settings.embedding_dimension}")
+logger.info("=" * 60)
+logger.info("RAG Configuration:")
+logger.info(f"  Chunk Size: {settings.chunk_size} chars")
+logger.info(f"  Chunk Overlap: {settings.chunk_overlap} chars")
+logger.info(f"  Top-K Retrieval: {settings.rag_top_k}")
 logger.info("=" * 60)
 

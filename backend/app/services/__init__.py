@@ -14,6 +14,17 @@ from app.services.llm import (
     LLMTimeoutError,
     LLMConnectionError,
 )
+from app.services.embedding import (
+    EmbeddingService,
+    EmbeddingServiceError,
+    EmbeddingAPIError,
+    EmbeddingRateLimitError,
+    EmbeddingTimeoutError,
+    EmbeddingConnectionError,
+    get_embedding_service,
+)
+from app.services.chunking import chunk_document, get_chunk_stats
+from app.services.rag import RAGService, RAGServiceError, NoEmbeddingsFoundError
 
 __all__ = [
     "DocumentService",
@@ -24,5 +35,17 @@ __all__ = [
     "LLMRateLimitError",
     "LLMTimeoutError",
     "LLMConnectionError",
+    "EmbeddingService",
+    "EmbeddingServiceError",
+    "EmbeddingAPIError",
+    "EmbeddingRateLimitError",
+    "EmbeddingTimeoutError",
+    "EmbeddingConnectionError",
+    "get_embedding_service",
+    "chunk_document",
+    "get_chunk_stats",
+    "RAGService",
+    "RAGServiceError",
+    "NoEmbeddingsFoundError",
 ]
 

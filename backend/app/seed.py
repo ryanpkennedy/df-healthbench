@@ -2,12 +2,14 @@
 Database seeding module.
 
 This module handles seeding the database with initial data,
-particularly SOAP notes from the soap/ directory.
+particularly medical documents from the med_docs/ directory (both text and PDF files),
+and optionally generating embeddings for RAG.
 """
 
 from pathlib import Path
 from sqlalchemy.orm import Session
 import logging
+from typing import List
 
 from app.database import SessionLocal
 from app.schemas.document import DocumentCreate
@@ -16,44 +18,149 @@ from app.services.document import DocumentService
 logger = logging.getLogger(__name__)
 
 
-def get_soap_notes_directory() -> Path:
+def get_medical_docs_directory() -> Path:
     """
-    Get the path to the SOAP notes directory.
+    Get the path to the medical documents directory.
     
     Returns:
-        Path object pointing to the soap/ directory
+        Path object pointing to the med_docs/ directory
     """
-    # Navigate from backend/app/seed.py to project root/soap/
+    # Navigate from backend/app/seed.py to project root/med_docs/
     backend_dir = Path(__file__).parent.parent
     project_root = backend_dir.parent
-    soap_dir = project_root / "soap"
+    med_docs_dir = project_root / "med_docs"
     
-    return soap_dir
+    return med_docs_dir
 
 
-def load_soap_note(file_path: Path) -> tuple[str, str]:
+def extract_text_from_pdf(file_path: Path) -> str:
     """
-    Load a SOAP note from a file.
+    Extract text content from a PDF file.
     
     Args:
-        file_path: Path to the SOAP note file
+        file_path: Path to the PDF file
+        
+    Returns:
+        Extracted text content (sanitized to remove NUL bytes)
+        
+    Raises:
+        ImportError: If pypdf is not installed
+        Exception: If PDF extraction fails
+    """
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        logger.error("pypdf library not installed. Run: poetry add pypdf")
+        raise ImportError("pypdf library required for PDF support")
+    
+    try:
+        reader = PdfReader(file_path)
+        text_parts = []
+        
+        for page_num, page in enumerate(reader.pages, 1):
+            text = page.extract_text()
+            if text.strip():
+                text_parts.append(text)
+        
+        content = "\n\n".join(text_parts)
+        
+        # Sanitize: Remove NUL bytes (0x00) which PostgreSQL TEXT columns cannot handle
+        # This is common in PDFs with embedded binary data or special formatting
+        content = content.replace('\x00', '')
+        
+        # Also remove other potentially problematic control characters
+        # Keep only newlines, tabs, and printable characters
+        content = ''.join(char for char in content if char == '\n' or char == '\t' or ord(char) >= 32 or ord(char) == 13)
+        
+        logger.debug(f"Extracted {len(content)} characters from {file_path.name} ({len(reader.pages)} pages)")
+        
+        return content
+        
+    except Exception as e:
+        logger.error(f"Failed to extract text from PDF {file_path.name}: {e}")
+        raise
+
+
+def load_document(file_path: Path) -> tuple[str, str]:
+    """
+    Load a document from a file (supports .txt and .pdf).
+    
+    Args:
+        file_path: Path to the document file
         
     Returns:
         Tuple of (title, content)
+        
+    Raises:
+        ValueError: If file type is not supported
     """
-    with open(file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
+    file_ext = file_path.suffix.lower()
     
-    # Extract title from filename (e.g., "soap_01.txt" -> "SOAP Note 01")
+    # Generate title from filename
     filename = file_path.stem
-    title = f"SOAP Note - {filename.replace('_', ' ').title()}"
+    
+    # Determine document type from parent directory
+    parent_dir = file_path.parent.name
+    if parent_dir == "soap":
+        title_prefix = "SOAP Note"
+    elif parent_dir == "policy":
+        title_prefix = "Policy Document"
+    else:
+        title_prefix = "Medical Document"
+    
+    # Clean up filename for title
+    clean_name = filename.replace('_', ' ').replace('-', ' ').title()
+    title = f"{title_prefix} - {clean_name}"
+    
+    # Load content based on file type
+    if file_ext == ".txt":
+        with open(file_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+    elif file_ext == ".pdf":
+        content = extract_text_from_pdf(file_path)
+    else:
+        raise ValueError(f"Unsupported file type: {file_ext}. Only .txt and .pdf are supported.")
     
     return title, content
 
 
-def seed_soap_notes(db: Session, force: bool = False) -> int:
+def find_all_documents(base_dir: Path) -> List[Path]:
     """
-    Seed the database with SOAP notes.
+    Find all supported document files in the medical docs directory.
+    
+    Searches recursively for .txt and .pdf files in subdirectories.
+    
+    Args:
+        base_dir: Base directory to search (med_docs/)
+        
+    Returns:
+        List of Path objects for all found documents
+    """
+    documents = []
+    
+    # Search for text files
+    documents.extend(base_dir.glob("**/*.txt"))
+    
+    # Search for PDF files
+    documents.extend(base_dir.glob("**/*.pdf"))
+    
+    # Filter out any hidden files or system files
+    documents = [
+        doc for doc in documents 
+        if not doc.name.startswith('.') and doc.name.lower() != 'overview.md'
+    ]
+    
+    # Sort by path for consistent ordering
+    documents.sort()
+    
+    return documents
+
+
+def seed_documents(db: Session, force: bool = False) -> int:
+    """
+    Seed the database with medical documents (SOAP notes and policy documents).
+    
+    Supports both .txt and .pdf files from the med_docs/ directory.
     
     Args:
         db: Database session
@@ -63,7 +170,7 @@ def seed_soap_notes(db: Session, force: bool = False) -> int:
         Number of documents created
         
     Raises:
-        FileNotFoundError: If SOAP notes directory not found
+        FileNotFoundError: If medical docs directory not found
     """
     # Check if documents already exist
     existing_docs = DocumentService.get_all_document_ids(db)
@@ -73,54 +180,125 @@ def seed_soap_notes(db: Session, force: bool = False) -> int:
         logger.info("Use force=True to seed anyway.")
         return 0
     
-    # Get SOAP notes directory
-    soap_dir = get_soap_notes_directory()
+    # Get medical docs directory
+    med_docs_dir = get_medical_docs_directory()
     
-    if not soap_dir.exists():
-        logger.error(f"SOAP notes directory not found: {soap_dir}")
-        raise FileNotFoundError(f"SOAP notes directory not found: {soap_dir}")
+    if not med_docs_dir.exists():
+        logger.error(f"Medical docs directory not found: {med_docs_dir}")
+        raise FileNotFoundError(f"Medical docs directory not found: {med_docs_dir}")
     
-    # Find all SOAP note files
-    soap_files = sorted(soap_dir.glob("soap_*.txt"))
+    # Find all document files (txt and pdf)
+    doc_files = find_all_documents(med_docs_dir)
     
-    if not soap_files:
-        logger.warning(f"No SOAP note files found in {soap_dir}")
+    if not doc_files:
+        logger.warning(f"No document files found in {med_docs_dir}")
         return 0
     
-    logger.info(f"Found {len(soap_files)} SOAP notes to load")
+    logger.info(f"Found {len(doc_files)} documents to load:")
+    
+    # Group by type for logging
+    txt_files = [f for f in doc_files if f.suffix == '.txt']
+    pdf_files = [f for f in doc_files if f.suffix == '.pdf']
+    logger.info(f"  - {len(txt_files)} text files")
+    logger.info(f"  - {len(pdf_files)} PDF files")
     
     # Load and create documents
     created_count = 0
+    failed_count = 0
     
-    for soap_file in soap_files:
+    for doc_file in doc_files:
         try:
-            logger.info(f"Loading {soap_file.name}...")
+            logger.info(f"Loading {doc_file.relative_to(med_docs_dir)}...")
             
-            # Load content
-            title, content = load_soap_note(soap_file)
+            # Load content (handles both txt and pdf)
+            title, content = load_document(doc_file)
+            
+            # Validate content
+            if not content or len(content.strip()) < 10:
+                logger.warning(f"Skipping {doc_file.name}: content too short or empty")
+                failed_count += 1
+                continue
             
             # Create document
             doc_data = DocumentCreate(title=title, content=content)
             document = DocumentService.create_new_document(db, doc_data)
             
-            logger.info(f"✅ Created document ID {document.id}: {title}")
+            logger.info(f"✅ Created document ID {document.id}: {title} ({len(content)} chars)")
             created_count += 1
             
         except Exception as e:
-            logger.error(f"Failed to load {soap_file.name}: {e}")
+            logger.error(f"Failed to load {doc_file.name}: {e}")
+            failed_count += 1
             continue
     
-    logger.info(f"Successfully seeded {created_count} SOAP notes")
+    logger.info(f"Successfully seeded {created_count} documents ({failed_count} failed)")
     
     return created_count
 
 
-def seed_database(force: bool = False) -> None:
+def seed_embeddings(db: Session, skip_embeddings: bool = False) -> dict:
+    """
+    Generate embeddings for all documents that don't have them.
+    
+    Args:
+        db: Database session
+        skip_embeddings: If True, skip embedding generation
+        
+    Returns:
+        Dictionary with embedding statistics
+    """
+    if skip_embeddings:
+        logger.info("Skipping embedding generation (--skip-embeddings flag)")
+        return {"skipped": True, "documents_embedded": 0, "total_chunks": 0}
+    
+    try:
+        from app.services.rag import RAGService
+        from app.crud import embedding as embedding_crud
+        
+        # Check if any documents need embedding
+        total_docs = len(DocumentService.get_all_documents(db, skip=0, limit=1000))
+        total_embeddings = embedding_crud.count_embeddings(db)
+        
+        if total_embeddings > 0:
+            logger.info(f"Embeddings already exist ({total_embeddings} embeddings). Skipping.")
+            return {"skipped": True, "documents_embedded": 0, "total_chunks": total_embeddings}
+        
+        if total_docs == 0:
+            logger.info("No documents to embed")
+            return {"skipped": True, "documents_embedded": 0, "total_chunks": 0}
+        
+        logger.info(f"Generating embeddings for {total_docs} documents...")
+        
+        # Create RAG service and embed all documents
+        rag_service = RAGService(db)
+        result = rag_service.embed_all_documents(force=False)
+        
+        logger.info(
+            f"✅ Embedding complete: {result['documents_processed']} documents, "
+            f"{result['total_chunks']} chunks, "
+            f"{result['processing_time_ms']}ms"
+        )
+        
+        return {
+            "skipped": False,
+            "documents_embedded": result['documents_processed'],
+            "total_chunks": result['total_chunks'],
+            "processing_time_ms": result['processing_time_ms']
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to generate embeddings: {e}")
+        logger.warning("Continuing without embeddings - you can generate them later via /rag/embed_all")
+        return {"skipped": True, "documents_embedded": 0, "total_chunks": 0, "error": str(e)}
+
+
+def seed_database(force: bool = False, skip_embeddings: bool = False) -> None:
     """
     Main function to seed the database with initial data.
     
     Args:
         force: If True, seed even if data already exists
+        skip_embeddings: If True, skip embedding generation
     """
     logger.info("=" * 60)
     logger.info("Database Seeding")
@@ -129,12 +307,29 @@ def seed_database(force: bool = False) -> None:
     db = SessionLocal()
     
     try:
-        # Seed SOAP notes
-        count = seed_soap_notes(db, force=force)
+        # Seed medical documents (SOAP notes and policy documents)
+        count = seed_documents(db, force=force)
         
         logger.info("=" * 60)
-        logger.info(f"Seeding complete: {count} documents created")
+        logger.info(f"Document seeding complete: {count} documents created")
         logger.info("=" * 60)
+        
+        # Generate embeddings if documents were created or if embeddings don't exist
+        if count > 0 or not skip_embeddings:
+            logger.info("")
+            logger.info("=" * 60)
+            logger.info("Embedding Generation")
+            logger.info("=" * 60)
+            
+            embedding_result = seed_embeddings(db, skip_embeddings=skip_embeddings)
+            
+            if not embedding_result.get("skipped", False):
+                logger.info("=" * 60)
+                logger.info(
+                    f"Embedding complete: {embedding_result['documents_embedded']} documents, "
+                    f"{embedding_result['total_chunks']} chunks"
+                )
+                logger.info("=" * 60)
         
     except Exception as e:
         logger.error(f"Seeding failed: {e}")
@@ -153,11 +348,15 @@ if __name__ == "__main__":
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     
-    # Check for --force flag
+    # Check for flags
     force = "--force" in sys.argv
+    skip_embeddings = "--skip-embeddings" in sys.argv
     
     if force:
         logger.info("Force flag detected - will seed even if data exists")
     
-    seed_database(force=force)
+    if skip_embeddings:
+        logger.info("Skip embeddings flag detected - will not generate embeddings")
+    
+    seed_database(force=force, skip_embeddings=skip_embeddings)
 
