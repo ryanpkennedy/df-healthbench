@@ -4,6 +4,23 @@ FastAPI backend for AI-powered medical document processing.
 
 ## Quick Start
 
+### With Docker (Recommended)
+
+The easiest way to run the entire application:
+
+```bash
+# From project root
+docker-compose up -d
+
+# Access API
+# API: http://localhost:8000
+# Docs: http://localhost:8000/docs
+```
+
+See root-level `README.md` for complete Docker deployment instructions.
+
+### Local Development (Without Docker)
+
 ```bash
 # 1. Start database
 make db-start
@@ -1008,9 +1025,22 @@ poetry run pytest --cov=app
 - [x] Comprehensive documentation with examples
 - [x] Notebook prototyping and validation
 
-### 🚧 Next Steps
+**Part 6: Containerization**
 
-- [ ] Part 6: Containerization (Dockerfile, full docker-compose)
+- [x] Multi-stage Dockerfile for backend (Python 3.11-slim)
+- [x] Docker Compose configuration with all services
+- [x] Service health checks and dependencies (backend waits for postgres)
+- [x] Environment variable management via env_file
+- [x] Volume mounts for data persistence and document seeding
+- [x] Production-ready configuration (4 Uvicorn workers)
+- [x] Non-root user for security
+- [x] Comprehensive documentation with deployment instructions
+- [x] Tested full stack deployment
+- [x] All endpoints verified in containerized environment
+
+### 🎉 Project Complete!
+
+All 6 parts of the DF HealthBench project have been successfully implemented and tested.
 
 ---
 

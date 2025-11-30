@@ -18,6 +18,43 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - df-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: df-healthbench-backend
+    env_file:
+      - ./backend/.env
+    ports:
+      - '8000:8000'
+    environment:
+      # Override DATABASE_URL for container networking (use service name instead of localhost)
+      DATABASE_URL: postgresql://dfuser:dfpassword@postgres:5432/df_healthbench
+      # Override API metadata for production
+      API_TITLE: 'DF HealthBench API'
+      API_VERSION: '1.0.0'
+      ENVIRONMENT: 'production'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./med_docs:/app/med_docs:ro
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - df-network
+
+networks:
+  df-network:
+    driver: bridge
 
 volumes:
   postgres_data:
