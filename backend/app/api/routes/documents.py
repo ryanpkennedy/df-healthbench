@@ -8,6 +8,7 @@ from typing import List
 from app.database import get_db
 from app.schemas.document import (
     DocumentCreate,
+    DocumentUpdate,
     DocumentResponse,
     DocumentListResponse,
     DocumentDeleteResponse
@@ -168,5 +169,50 @@ async def delete_document(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete document: {str(e)}"
+        )
+
+
+@router.put("/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: int,
+    document: DocumentUpdate,
+    db: Session = Depends(get_db)
+) -> DocumentResponse:
+    """
+    Update an existing document.
+
+    Updates title and/or content of a document. Only provided fields are updated.
+
+    Args:
+        document_id: ID of the document to update
+        document: DocumentUpdate schema with optional title and content
+        db: Database session (injected)
+
+    Returns:
+        DocumentResponse with updated document data
+
+    Raises:
+        HTTPException: 404 if document not found
+        HTTPException: 400 if no fields provided for update
+        HTTPException: 500 if database error occurs
+    """
+    # Validate that at least one field is provided
+    if document.title is None and document.content is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one field (title or content) must be provided for update"
+        )
+
+    try:
+        return DocumentService.update_document(db, document_id, document)
+    except DocumentNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update document: {str(e)}"
         )
 

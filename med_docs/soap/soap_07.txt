@@ -1,0 +1,41 @@
+SOAP Note - Encounter Date: 2025-02-04
+
+Patient: Maya Thornton (DOB: 1991-08-19)
+
+S:
+Pt presents with dysuria, urinary frequency/urgency x2 days. Reports suprapubic discomfort and cloudy urine. Denies flank pain, fever, chills, nausea/vomiting. Denies vaginal discharge/odor. Sexually active, no new partners reported. No hx pyelonephritis. No known drug allergies.
+
+O:
+Vitals: BP 118/76 mmHg, HR 82 bpm, RR 16, Temp 98.6°F, Wt 148 lbs
+General: Alert, NAD
+ABD: Mild suprapubic TTP, no CVA tenderness bilat
+GU: Deferred today (pt denies vaginal symptoms)
+Urinalysis (POC): +LE, +nitrites, trace blood, no ketones
+
+A:
+
+Acute uncomplicated cystitis
+
+Dysuria
+
+P:
+
+Start nitrofurantoin (Macrobid) 100 mg PO BID x5 days
+
+Urine culture sent due to visible urine change and trace blood; adjust abx if needed
+
+Encourage hydration; may use phenazopyridine OTC x2 days for symptom relief (reviewed urine discoloration)
+
+ER/RTC precautions: fever, flank pain, persistent vomiting, worsening pain, no improvement in 48–72 hrs
+
+Follow-up PRN or via portal with culture results
+
+Prescription Note:
+Nitrofurantoin monohydrate/macrocrystals 100 mg capsules
+Dispense: #10
+Sig: Take 1 capsule PO twice daily for 5 days
+Refills: 0
+
+Signed:
+Dr. Hannah Ko, DO
+Family Medicine

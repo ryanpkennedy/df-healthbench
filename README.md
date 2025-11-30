@@ -139,6 +139,26 @@ Visit http://localhost:8000/docs and test the `/fhir/convert` endpoint interacti
 
 ## Docker Commands
 
+For convenience, use the provided Makefile commands:
+
+```bash
+# See all available commands
+make help
+
+# Common operations
+make build              # Build images
+make up                 # Start services
+make logs               # View logs
+make ps                 # Check status
+make down               # Stop services
+
+# Development with hot-reload
+make dev-up             # Start dev environment
+make dev-down           # Stop dev environment
+```
+
+Or use docker-compose directly:
+
 ```bash
 # Start services (detached mode)
 docker-compose up -d

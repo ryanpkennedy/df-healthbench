@@ -1,0 +1,46 @@
+SOAP Note - Encounter Date: 2025-04-22 (Diabetes Follow-Up)
+
+Patient: patient--014
+
+S:
+Pt returns for T2DM follow-up. Reports occasional polyuria and increased thirst, especially afternoons. Admits inconsistent meal timing and increased soda intake during recent travel. Taking metformin “most days” but misses ~3 doses/week due to GI upset. Denies CP, SOB, numbness/tingling in feet, or vision changes. Last eye exam >2 years ago.
+
+O:
+Vitals: BP 130/82, HR 74, Wt 214 lbs (up 6 lbs since last visit)
+General: NAD
+CV/Resp: Normal exam
+Feet: Skin intact, no ulcers; pulses +2; monofilament intact bilat
+POC A1c: 8.4% (prior 7.6% per pt report)
+Labs ordered: CMP, urine microalbumin/Cr, lipid panel
+
+A:
+
+Type 2 diabetes mellitus, suboptimally controlled
+
+Medication nonadherence due to metformin intolerance
+
+Overweight/possible metabolic syndrome
+
+P:
+
+Switch to metformin ER 500 mg PO daily with dinner x7 days, then increase to 1000 mg ER daily as tolerated
+
+Nutrition counseling referral; review simple swaps (eliminate sugary drinks)
+
+Encourage walking after meals; set goal 20–30 min/day, 5 days/wk
+
+Order/referral: dilated retinal exam within 2–3 months
+
+Review hypoglycemia precautions (low risk on metformin alone)
+
+RTC in 3 months with repeat A1c; earlier if med intolerance persists
+
+Prescription Note:
+Metformin ER 500 mg tablet
+Dispense: #60
+Sig: Take 1 tab PO daily with dinner for 7 days, then take 2 tabs PO daily with dinner as tolerated
+Refills: 2
+
+Signed:
+Dr. Rina Patel, MD
+Endocrinology

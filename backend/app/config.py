@@ -40,6 +40,19 @@ class Settings(BaseSettings):
     openai_temperature: float = 1
     openai_timeout: int = 30  # seconds
     
+    # Supported OpenAI models (Note: Only OpenAI models are supported, not Gemini, Claude, etc.)
+    # These model names follow OpenAI's naming convention
+    supported_models: list[str] = [
+        "gpt-5-nano",      # Most cost-effective
+        "gpt-5-mini",      # Balanced performance
+        "gpt-5",           # High performance
+        "gpt-5.1",         # Latest version
+        "gpt-4o-mini",     # Alias for gpt-5-nano
+        "gpt-4o",          # Alias for gpt-5
+        "gpt-4",           # Legacy model
+        "gpt-3.5-turbo",   # Legacy model
+    ]
+    
     # OpenAI Embedding Configuration
     openai_embedding_model: str = "text-embedding-3-small"
     embedding_dimension: int = 1536  # text-embedding-3-small dimensions

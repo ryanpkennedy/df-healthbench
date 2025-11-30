@@ -4,6 +4,8 @@ package-mode = false
 [tool.poetry.group.dev.dependencies]
 jupyter = "^1.1.1"
 ipykernel = "^7.1.0"
+pytest = "^8.3.0"
+pytest-asyncio = "^0.24.0"
 
 [project]
 name = "df-backend"
@@ -33,6 +35,15 @@ dependencies = [
     "pyyaml (>=6.0.0,<7.0.0)"
 ]
 
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-v --tb=short"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

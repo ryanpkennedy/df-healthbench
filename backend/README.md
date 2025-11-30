@@ -710,12 +710,36 @@ OPENAI_TIMEOUT=30
 
 ### Supported Models
 
-| Model        | Cost (Input/Output per 1M tokens) | Use Case          |
-| ------------ | --------------------------------- | ----------------- |
-| `gpt-5-nano` | $0.05 / $0.40                     | ⭐ Most efficient |
-| `gpt-5-mini` | $0.25 / $2.00                     | Balanced          |
-| `gpt-5`      | $1.25 / $10.00                    | High performance  |
-| `gpt-5.1`    | $1.25 / $10.00                    | Latest version    |
+**⚠️ Important: Only OpenAI models are supported. Other providers (Gemini, Claude, Anthropic, etc.) are not supported.**
+
+The application validates model names and will return a 400 error if an unsupported model is requested.
+
+| Model          | Cost (Input/Output per 1M tokens) | Use Case          |
+| -------------- | --------------------------------- | ----------------- |
+| `gpt-5-nano`   | $0.05 / $0.40                     | ⭐ Default, most efficient |
+| `gpt-4o-mini`  | $0.05 / $0.40                     | Alias for gpt-5-nano |
+| `gpt-5-mini`   | $0.25 / $2.00                     | Balanced          |
+| `gpt-5`        | $1.25 / $10.00                    | High performance  |
+| `gpt-4o`       | $1.25 / $10.00                    | Alias for gpt-5   |
+| `gpt-5.1`      | $1.25 / $10.00                    | Latest version    |
+| `gpt-4`        | Higher cost                       | Legacy model      |
+| `gpt-3.5-turbo`| Lower cost                        | Legacy model      |
+
+**Model Selection:**
+
+You can override the default model on a per-request basis:
+
+```bash
+# Summarize with default model (gpt-5-nano)
+curl -X POST http://localhost:8000/llm/summarize_document/1
+
+# Summarize with specific model
+curl -X POST "http://localhost:8000/llm/summarize_document/1?model=gpt-5-mini"
+
+# Invalid model returns 400 error
+curl -X POST "http://localhost:8000/llm/summarize_document/1?model=claude-3"
+# Returns: {"detail": "Invalid model 'claude-3'. Only OpenAI models are supported..."}
+```
 
 ### Architecture
 
@@ -946,12 +970,24 @@ curl http://localhost:8000/rag/stats
 ### Automated Tests
 
 ```bash
-# Run tests (when implemented)
+# Install test dependencies
+poetry install --with dev
+
+# Run all tests
 poetry run pytest
+
+# Run unit tests only (fast, mocked APIs)
+poetry run pytest tests/test_agent_tools.py -v
 
 # Run with coverage
 poetry run pytest --cov=app
+
+# Run integration tests (requires server running)
+poetry run python tests/test_agent_extraction_api.py
+poetry run python tests/test_fhir_conversion.py
 ```
+
+See `tests/README_TESTS.md` for detailed testing documentation.
 
 ---
 

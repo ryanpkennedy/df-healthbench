@@ -5,8 +5,9 @@ Provides endpoints for LLM-powered medical document processing including
 summarization and other text analysis tasks.
 """
 
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 import logging
 
 from app.database import get_db
@@ -85,6 +86,11 @@ async def summarize_note(request: SummarizeRequest) -> SummarizeResponse:
 @handle_llm_exceptions
 async def summarize_document(
     document_id: int,
+    model: Optional[str] = Query(
+        None,
+        description="Optional LLM model override (e.g., 'gpt-4o', 'gpt-5-nano'). Only OpenAI models supported.",
+        examples=["gpt-5-nano", "gpt-5-mini", "gpt-4o"]
+    ),
     db: Session = Depends(get_db)
 ) -> SummarizeResponse:
     """
@@ -93,15 +99,22 @@ async def summarize_document(
     This endpoint fetches a document from the database by its ID and generates
     a concise, accurate summary highlighting key clinical information.
     
+    **Note:** Only OpenAI models are supported. Other providers (Gemini, Claude, etc.) 
+    are not supported. Invalid models will return a 400 error.
+    
     Args:
         document_id: ID of the document to summarize
+        model: Optional LLM model override (defaults to gpt-5-nano)
         db: Database session (injected)
         
     Returns:
         SummarizeResponse with the summary and metadata
     """
     # Log incoming request
-    logger.info(f"Received document summarization request: document_id={document_id}")
+    logger.info(
+        f"Received document summarization request: document_id={document_id}, "
+        f"model_override={model}"
+    )
     
     # Fetch document from database
     document = DocumentService.get_document_by_id(db, document_id)
@@ -117,7 +130,7 @@ async def summarize_document(
     # Summarize document content
     result = llm_service.summarize_note(
         text=document.content,
-        model=None,  # Use default model
+        model=model,  # Pass model parameter
     )
     
     # Convert to response schema

@@ -6,7 +6,7 @@ These schemas are used for request/response validation in FastAPI endpoints.
 
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 
 class DocumentBase(BaseModel):
@@ -39,6 +39,29 @@ class DocumentCreate(DocumentBase):
         min_length=10,  # Require at least 10 characters for content
         description="Document content",
         examples=["Subjective: Patient reports fever..."]
+    )
+
+
+class DocumentUpdate(BaseModel):
+    """
+    Schema for updating an existing document (PUT request).
+    
+    Both fields are optional - only provided fields will be updated.
+    At least one field must be provided.
+    """
+    
+    title: Optional[str] = Field(
+        None,
+        min_length=1,
+        max_length=255,
+        description="Updated document title (optional)",
+        examples=["SOAP Note - Patient Jane Doe (Updated)"]
+    )
+    content: Optional[str] = Field(
+        None,
+        min_length=10,
+        description="Updated document content (optional)",
+        examples=["Subjective: Patient reports improved symptoms..."]
     )
 
 

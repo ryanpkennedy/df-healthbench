@@ -1,0 +1,44 @@
+SOAP Note - Encounter Date: 2025-03-12
+
+Patient: Lionel “Lee” Park (DOB: 1978-01-07)
+
+S:
+Pt here re: elevated home BP readings over last month (typically 145–160/90–98). Reports intermittent mild headaches (frontal pressure) and increased work stress. Denies chest pain, SOB, vision loss, focal weakness, syncope. Sleep 5–6 hrs/night. Diet high in takeout/sodium. Drinks 2–3 coffees/day. No tobacco; ETOH 4–6 drinks/week.
+
+O:
+Vitals: BP 152/96 (repeat 150/94), HR 76, RR 14, Temp 98.1°F, BMI 29.1
+General: Well-appearing, NAD
+CV: RRR, no murmurs
+Lungs: CTA bilat
+Neuro: CN II–XII intact, no focal deficits
+Ext: No edema
+
+A:
+
+Primary hypertension (new diagnosis)
+
+Overweight (BMI 29.1)
+
+Tension-type headaches vs BP-related headache (no red flags)
+
+P:
+
+Start amlodipine 5 mg PO daily; discussed common adverse effects (ankle edema, flushing)
+
+Lifestyle: DASH-style diet, reduce sodium, limit caffeine, increase activity (goal 150 min/wk)
+
+Home BP log (AM/PM) x2–3 weeks
+
+Labs ordered: BMP, A1c, lipid panel, TSH; consider EKG next visit
+
+RTC in 4 weeks for BP recheck; sooner if BP >180/120 or any chest pain, neuro sx
+
+Prescription Note:
+Amlodipine 5 mg tablet
+Dispense: #30
+Sig: Take 1 tablet PO daily
+Refills: 2
+
+Signed:
+Dr. Peter Langford, MD
+Internal Medicine

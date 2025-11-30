@@ -1,0 +1,41 @@
+SOAP Note - Encounter Date: 2025-05-08
+
+Patient: Sofia Delaney (DOB: 1989-10-30)
+
+S:
+Pt presents with acute low back pain x4 days after lifting a heavy box. Describes tight “spasm” sensation, 6/10 pain, worse with bending and prolonged sitting. Denies leg weakness, saddle anesthesia, bowel/bladder incontinence, fever, weight loss, or hx malignancy. Reports no trauma/fall. Tried ibuprofen 400 mg with partial relief.
+
+O:
+Vitals: BP 124/78, HR 80, Temp 98.4°F
+General: Mild discomfort with movement, ambulatory
+Back: Lumbar paraspinal tenderness and spasm, decreased flexion due to pain
+Neuro: Strength 5/5 BLE, sensation intact, reflexes 2+, negative straight-leg raise bilat
+Gait: Slightly guarded, no foot drop
+
+A:
+
+Acute lumbar strain with muscle spasm
+
+No red-flag symptoms; low suspicion for radiculopathy
+
+P:
+
+Continue NSAID: ibuprofen 600 mg PO q8h PRN with food x3–5 days, then PRN
+
+Add cyclobenzaprine 5 mg PO qHS PRN muscle spasm (caution sedation)
+
+Activity: Encourage walking/light mobility; avoid bed rest; heat/ice as tolerated
+
+Referral: PT if not improving within 1–2 weeks; home stretching handout provided
+
+Imaging not indicated today; return precautions reviewed (weakness, numbness, bowel/bladder changes, fever)
+
+Prescription Note:
+Cyclobenzaprine 5 mg tablet
+Dispense: #10
+Sig: Take 1 tab PO at bedtime as needed for muscle spasm
+Refills: 0
+
+Signed:
+Dr. Elise Moreno, MD
+Sports Medicine

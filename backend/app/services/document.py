@@ -12,7 +12,7 @@ from typing import List, Optional
 import logging
 
 from app.models.document import Document
-from app.schemas.document import DocumentCreate, DocumentResponse, DocumentListResponse
+from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse, DocumentListResponse
 from app.crud import document as document_crud
 
 
@@ -187,6 +187,60 @@ class DocumentService:
             raise
         except Exception as e:
             logger.error(f"Unexpected error while fetching documents: {e}")
+            raise
+    
+    @staticmethod
+    def update_document(
+        db: Session,
+        document_id: int,
+        document_data: DocumentUpdate
+    ) -> DocumentResponse:
+        """
+        Update an existing document.
+
+        Args:
+            db: Database session
+            document_id: ID of document to update
+            document_data: DocumentUpdate schema with optional title/content
+
+        Returns:
+            DocumentResponse with updated document data
+
+        Raises:
+            DocumentNotFoundError: If document doesn't exist
+            SQLAlchemyError: If database operation fails
+
+        Example:
+            >>> doc_data = DocumentUpdate(title="Updated Title")
+            >>> response = DocumentService.update_document(db, 1, doc_data)
+            >>> print(f"Updated document: {response.title}")
+        """
+        try:
+            logger.info(f"Updating document with ID: {document_id}")
+
+            updated_doc = document_crud.update_document(
+                db,
+                document_id,
+                title=document_data.title,
+                content=document_data.content
+            )
+
+            if not updated_doc:
+                logger.warning(f"Document with ID {document_id} not found for update")
+                raise DocumentNotFoundError(f"Document with ID {document_id} not found")
+
+            logger.info(f"Successfully updated document: {document_id}")
+            return DocumentResponse.model_validate(updated_doc)
+
+        except DocumentNotFoundError:
+            raise
+        except SQLAlchemyError as e:
+            logger.error(f"Database error while updating document {document_id}: {e}")
+            db.rollback()
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error while updating document {document_id}: {e}")
+            db.rollback()
             raise
     
     @staticmethod

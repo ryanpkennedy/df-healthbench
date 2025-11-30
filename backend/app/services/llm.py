@@ -42,6 +42,11 @@ class LLMConnectionError(LLMServiceError):
     pass
 
 
+class InvalidModelError(LLMServiceError):
+    """Raised when an invalid or unsupported model is requested."""
+    pass
+
+
 class LLMService:
     """
     Service class for LLM operations using OpenAI API.
@@ -85,6 +90,33 @@ class LLMService:
             f"temperature={self.temperature}"
         )
     
+    def _validate_model(self, model: Optional[str]) -> str:
+        """
+        Validate and return the model to use.
+        
+        Args:
+            model: Optional model name override
+            
+        Returns:
+            The validated model name to use
+            
+        Raises:
+            InvalidModelError: If the provided model is not supported
+        """
+        model_to_use = model or self.default_model
+        
+        if model_to_use not in settings.supported_models:
+            error_msg = (
+                f"Invalid model '{model_to_use}'. "
+                f"Only OpenAI models are supported. "
+                f"Supported models: {', '.join(settings.supported_models)}. "
+                f"Note: Gemini, Claude, and other providers are not supported."
+            )
+            logger.error(error_msg)
+            raise InvalidModelError(error_msg)
+        
+        return model_to_use
+    
     def _create_completion(
         self,
         messages: list[Dict[str, str]],
@@ -110,8 +142,10 @@ class LLMService:
             LLMTimeoutError: If request times out
             LLMConnectionError: If connection fails
             LLMAPIError: For other API errors
+            InvalidModelError: If the provided model is not supported
         """
-        model = model or self.default_model
+        # Validate model before using it
+        model = self._validate_model(model)
         temperature = temperature if temperature is not None else self.temperature
         
         # Log the request

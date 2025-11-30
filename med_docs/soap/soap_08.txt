@@ -1,0 +1,48 @@
+SOAP Note - Encounter Date: 2025-09-03
+
+Patient: Natalie Ibarra (DOB: 2002-02-26)
+
+S:
+Pt presents with cough, chest tightness, and wheezing x5 days after URI symptoms (rhinorrhea/sore throat). Reports using albuterol inhaler 4–5x/day with only short relief. No fever today, mild fatigue. Denies chest pain, hemoptysis, or leg swelling. Hx mild intermittent asthma; not on controller inhaler. No known drug allergies.
+
+O:
+Vitals: BP 110/72, HR 92, RR 18, Temp 98.7°F, SpO2 97% RA
+General: Speaking full sentences, mild respiratory effort after exertion
+Lungs: Expiratory wheeze bilat, no crackles, good air movement
+CV: RRR
+HEENT: Nasal congestion, mild pharyngeal erythema, no exudate
+
+A:
+
+Asthma exacerbation (likely viral-triggered), mild–moderate
+
+Viral upper respiratory infection
+
+P:
+
+Start controller: budesonide-formoterol 80/4.5 mcg, 2 puffs BID (rinse mouth after use)
+
+Continue albuterol 2 puffs q4–6h PRN wheeze/SOB
+
+If symptoms worsen or peak flow declines: prednisone 40 mg PO daily x5 days (provided as “start if” with clear instructions)
+
+Supportive care for URI: hydration, rest, saline spray; avoid smoking/irritants
+
+RTC in 2 weeks (or sooner) to reassess control; plan spirometry once back to baseline
+
+ER precautions reviewed (severe SOB, difficulty speaking, cyanosis, no relief with rescue inhaler)
+
+Prescription Note:
+Budesonide-formoterol 80/4.5 mcg inhaler
+Dispense: 1 inhaler
+Sig: Inhale 2 puffs twice daily
+Refills: 2
+
+Prednisone 20 mg tablets
+Dispense: #10
+Sig: Take 2 tabs (40 mg) PO daily for 5 days only if directed per exacerbation plan
+Refills: 0
+
+Signed:
+Dr. Samuel Ortega, MD
+Pulmonary / Allergy

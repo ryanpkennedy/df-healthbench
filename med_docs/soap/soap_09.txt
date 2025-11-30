@@ -1,0 +1,47 @@
+SOAP Note - Encounter Date: 2025-06-17
+
+Patient: Devon Kline (DOB: 1994-04-11)
+
+S:
+Pt presents for anxiety follow-up/new med discussion. Reports persistent worry, restlessness, difficulty concentrating, and insomnia (sleep onset >1 hr) x3–4 months. Stressors include new job role. Denies SI/HI, hallucinations, or manic symptoms. Occasional palpitations during anxiety episodes. Drinks 1–2 alcoholic drinks on weekends, no tobacco, rare THC edibles. No prior psychiatric meds.
+
+O:
+Vitals: BP 122/80, HR 86, Temp 98.2°F
+General: Calm, cooperative
+Psych: Alert/oriented, linear thought process, anxious mood, no psychosis, judgment intact
+Screening: GAD-7 suggestive of moderate anxiety (documented in chart)
+
+A:
+
+Generalized anxiety disorder
+
+Insomnia (likely secondary to anxiety)
+
+P:
+
+Start sertraline 25 mg PO daily x7 days, then increase to 50 mg PO daily if tolerated
+
+Discussed side effects (GI upset, headache, sexual side effects), expected onset 2–6 weeks, and not stopping abruptly
+
+Hydroxyzine 25 mg PO PRN anxiety or sleep (reviewed drowsiness; avoid alcohol when using)
+
+Referral: CBT/therapy resources provided
+
+Sleep hygiene plan (consistent schedule, limit screens/caffeine after noon)
+
+RTC in 4–6 weeks for response/tolerability; sooner for worsening mood/SI
+
+Prescription Note:
+Sertraline 25 mg tablets
+Dispense: #60
+Sig: Take 1 tab PO daily x7 days, then take 2 tabs PO daily
+Refills: 1
+
+Hydroxyzine 25 mg tablets
+Dispense: #20
+Sig: Take 1 tab PO as needed for anxiety or at bedtime as needed for sleep
+Refills: 0
+
+Signed:
+J. Morgan Ellis, NP
+Primary Care / Behavioral Health

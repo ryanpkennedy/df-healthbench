@@ -19,6 +19,7 @@ from app.services.llm import (
     LLMRateLimitError,
     LLMTimeoutError,
     LLMConnectionError,
+    InvalidModelError,
 )
 from app.services.document import DocumentNotFoundError
 
@@ -66,6 +67,7 @@ def handle_llm_exceptions(func: Callable) -> Callable:
     
     Handles:
     - ValueError: 400 Bad Request (validation errors)
+    - InvalidModelError: 400 Bad Request (unsupported model)
     - DocumentNotFoundError: 404 Not Found
     - LLMRateLimitError: 503 Service Unavailable
     - LLMTimeoutError: 503 Service Unavailable
@@ -97,6 +99,14 @@ def handle_llm_exceptions(func: Callable) -> Callable:
         except ValueError as e:
             # Input validation errors (empty text, too short, etc.)
             logger.warning(f"Invalid input in {func.__name__}: {str(e)}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e)
+            )
+            
+        except InvalidModelError as e:
+            # Invalid or unsupported model requested
+            logger.warning(f"Invalid model in {func.__name__}: {str(e)}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=str(e)

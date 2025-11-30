@@ -33,8 +33,8 @@ class SummarizeRequest(BaseModel):
     
     model: Optional[str] = Field(
         None,
-        description="Optional: Override the default LLM model",
-        examples=["gpt-5-nano", "gpt-5-mini", "gpt-5"]
+        description="Optional: Override the default LLM model (OpenAI only). Invalid models return 400 error.",
+        examples=["gpt-5-nano", "gpt-5-mini", "gpt-4o-mini", "gpt-5"]
     )
 
 

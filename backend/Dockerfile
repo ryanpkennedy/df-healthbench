@@ -35,9 +35,49 @@ COPY pyproject.toml poetry.lock ./
 RUN poetry install --only main --no-root --no-directory
 
 # ============================================================================
-# Stage 2: Runtime
+# Stage 2: Development (with hot-reload support)
 # ============================================================================
-FROM python:3.11-slim
+FROM python:3.11-slim as development
+
+# Set working directory
+WORKDIR /app
+
+# Install runtime system dependencies
+RUN apt-get update && apt-get install -y \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Create non-root user for security
+RUN useradd -m -u 1000 dfuser && \
+    chown -R dfuser:dfuser /app
+
+# Switch to non-root user
+USER dfuser
+
+# Set environment variables
+ENV PATH="/app/.venv/bin:$PATH"
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Development command with hot-reload
+# Note: Source code is mounted as volume in docker-compose.dev.yml
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+
+# ============================================================================
+# Stage 3: Production (default)
+# ============================================================================
+FROM python:3.11-slim as production
 
 # Set working directory
 WORKDIR /app

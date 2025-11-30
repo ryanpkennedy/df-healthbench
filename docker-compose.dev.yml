@@ -1,0 +1,37 @@
+# Docker Compose override for development environment
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# This file overrides the production configuration to enable:
+# - Hot-reload on code changes
+# - Source code mounting (no rebuild needed)
+# - Debug-friendly settings
+
+version: '3.8'
+
+services:
+  backend:
+    # Build development stage instead of production
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    
+    # Mount source code for hot-reload
+    volumes:
+      - ./backend/app:/app/app:ro
+      - ./med_docs:/app/med_docs:ro
+    
+    # Override environment for development
+    environment:
+      DATABASE_URL: postgresql://dfuser:dfpassword@postgres:5432/df_healthbench
+      API_TITLE: 'DF HealthBench API (Development)'
+      API_VERSION: '1.0.0-dev'
+      ENVIRONMENT: 'development'
+      LOG_LEVEL: 'DEBUG'
+    
+    # Disable restart policy for development
+    restart: "no"
+    
+    # Development uses explicit command from Dockerfile.development stage
+    # (uvicorn with --reload flag)
+
