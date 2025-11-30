@@ -16,6 +16,7 @@ from openai import OpenAI
 from agents import Agent, Runner, function_tool
 
 from app.config import settings
+from app.prompts import get_prompt
 from app.schemas.extraction import (
     StructuredClinicalData,
     DiagnosisCode,
@@ -45,22 +46,15 @@ def extract_clinical_entities_func(note_text: str) -> dict:
     """
     client = OpenAI(api_key=settings.openai_api_key)
     
+    # Load system prompt from YAML
+    system_prompt = get_prompt("agent_extraction.yaml", "entity_extraction_system_prompt")
+    
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
             {
                 "role": "system",
-                "content": """You are a medical data extraction specialist. Extract clinical entities from medical notes.
-                
-Extract and return JSON with these fields:
-- diagnoses: array of diagnosis/condition strings (e.g., ["Type 2 Diabetes Mellitus", "Hypertension"])
-- medications: array of medication strings with dosages if present (e.g., ["Metformin 500mg", "Lisinopril 10mg"])
-- vital_signs: object with keys like temperature, blood_pressure, heart_rate, respiratory_rate, oxygen_saturation, weight, height, bmi (all optional)
-- lab_results: array of lab result strings (e.g., ["HbA1c: 7.2%", "eGFR: 85 mL/min"])
-- plan_actions: array of treatment plan items (e.g., ["Follow-up in 3 months", "Continue current medications"])
-- patient_info: object with age and gender fields if mentioned (e.g., {"age": "45", "gender": "male"})
-
-Extract exactly as written in the note. Do not normalize or interpret."""
+                "content": system_prompt
             },
             {"role": "user", "content": note_text}
         ],
@@ -222,25 +216,12 @@ class AgentExtractionService:
         if not os.getenv("OPENAI_API_KEY"):
             os.environ["OPENAI_API_KEY"] = settings.openai_api_key
         
+        # Load agent instructions from YAML
+        agent_instructions = get_prompt("agent_extraction.yaml", "agent_instructions")
+        
         self.agent = Agent(
             name="Clinical Data Extraction Agent",
-            instructions="""
-You are a medical data extraction specialist. Your job is to extract structured clinical data from medical notes and enrich it with standardized medical codes.
-
-**Process:**
-1. First, use the extract_clinical_entities tool to extract raw clinical data from the note
-2. For each diagnosis/condition extracted, use lookup_icd10_code to get the ICD-10-CM code
-3. For each medication extracted, use lookup_rxnorm_code to get the RxNorm code
-4. Compile all the enriched data into the structured output format
-
-**Important guidelines:**
-- Be thorough - extract all diagnoses, medications, vital signs, labs, and plan items
-- Call the lookup tools for EVERY diagnosis and medication (don't skip any)
-- If a code lookup fails or returns no results, still include the text with null codes
-- Preserve the original text from the note in the 'text' field
-- Handle missing or incomplete data gracefully
-- The final output must match the StructuredClinicalData schema exactly
-""",
+            instructions=agent_instructions,
             tools=[extract_clinical_entities, lookup_icd10_code, lookup_rxnorm_code],
             output_type=StructuredClinicalData,
         )

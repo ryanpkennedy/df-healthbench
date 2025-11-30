@@ -12,7 +12,7 @@ import logging
 
 from app.config import settings
 from app.database import create_tables, check_db_connection
-from app.api.routes import health, documents, llm, rag, extraction
+from app.api.routes import health, documents, llm, rag, extraction, fhir
 
 # Configure logging
 logging.basicConfig(
@@ -118,6 +118,7 @@ app.include_router(documents.router, prefix="/documents", tags=["Documents"])
 app.include_router(llm.router, prefix="/llm", tags=["LLM"])
 app.include_router(rag.router, prefix="/rag", tags=["RAG"])
 app.include_router(extraction.router, prefix="/agent", tags=["Agent Extraction"])
+app.include_router(fhir.router, prefix="/fhir", tags=["FHIR Conversion"])
 
 if __name__ == "__main__":
     import uvicorn

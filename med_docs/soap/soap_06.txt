@@ -1,5 +1,5 @@
 SOAP Note - Encounter Date: 2024-06-20 (Physical Therapy Appointment)
-Patient X
+Patient: Emily Williams - DOB 1996-12-02
 S:
 Pt returns for initial PT appt. approx. 6 months post left knee arthroscopy for meniscal repair. Reports overall satisfaction with surgical outcome, minimal daily pain; intermittent stiffness and mild discomfort noted mainly after extended periods of sitting or physical activity. Pt keen on resuming full recreational activity (running, yoga). Currently performing routine strengthening and stretching at home, compliant with recommendations thus far.
 
@@ -30,5 +30,5 @@ RTC as scheduled for reassessment at end of PT regimen or sooner if issues arise
 No Rx prescribed today.
 
 Signed:
-PT, DPT
+Alex Carter, PT, DPT
 Physical Therapist

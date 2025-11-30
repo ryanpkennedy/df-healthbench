@@ -1,5 +1,5 @@
 SOAP Note - Encounter Date: 2023-10-26
-Patient: patient--001
+Patient: Bob Smith
 
 S: Pt presents today for annual physical check-up. No chief complaints. Reports generally good health, denies chest pain, SOB, HA, dizziness. Family hx of elevated cholesterol (dad), no significant personal PMH issues reported. States routine exercise (~2x/wk), balanced diet but with occasional fast-food. Denies tobacco use, reports occasional ETOH socially.
 
@@ -34,5 +34,5 @@ Routine annual influenza vaccine administered today - tolerated well
 No Rx prescribed at this visit.
 
 Signed:
-MD
+Dr. Mark Reynolds, MD
 Internal Medicine

@@ -1,5 +1,5 @@
 SOAP Note - Encounter Date: 2023-12-28
-Patient X
+Patient Emily G. Williams. DOB 1996-12-02
 S:
 Pt presents for scheduled post-surgical follow-up s/p arthroscopic surgery of left knee (meniscal repair), performed approximately 2 weeks ago. Reports surgical site discomfort significantly improved. Denies fever, chills, discharge, redness, or swelling. Pt has begun gentle ROM exercises as instructed but still experiences mild discomfort with excessive flexion or prolonged standing. Pain rates 2-3/10 with activity, controlled well with ibuprofen PRN.
 
@@ -30,5 +30,5 @@ Dispense: #30 (thirty) tablets
 Sig: Take 1 tab PO q6-8 hours PRN knee pain/inflammation
 Refills: 1
 Signed:
-MD
+Dr. Sarah Martinez, MD
 Orthopedic Surgery

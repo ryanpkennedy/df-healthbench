@@ -50,6 +50,7 @@ poetry run uvicorn app.main:app --reload
 - **LLM:** OpenAI API (GPT + Embeddings)
 - **Agents:** OpenAI Agents SDK
 - **Vector Search:** PGVector extension
+- **FHIR:** fhir.resources 8.1.0 (FHIR R4)
 - **External APIs:** NLM Clinical Tables (ICD-10-CM), NLM RxNav (RxNorm)
 - **Environment:** Poetry
 
@@ -70,7 +71,9 @@ backend/
 │   ├── schemas/                # Pydantic validation schemas
 │   │   ├── document.py         # Document request/response schemas
 │   │   ├── llm.py              # LLM request/response schemas
-│   │   └── rag.py              # RAG request/response schemas
+│   │   ├── rag.py              # RAG request/response schemas
+│   │   ├── extraction.py       # Agent extraction schemas
+│   │   └── fhir.py             # FHIR conversion schemas
 │   │
 │   ├── crud/                   # Database operations
 │   │   ├── document.py         # Document CRUD queries
@@ -81,14 +84,18 @@ backend/
 │   │   ├── llm.py              # LLM service layer (OpenAI)
 │   │   ├── embedding.py        # Embedding generation service
 │   │   ├── chunking.py         # Document chunking utilities
-│   │   └── rag.py              # RAG pipeline orchestration
+│   │   ├── rag.py              # RAG pipeline orchestration
+│   │   ├── agent_extraction.py # Agent extraction service
+│   │   └── fhir_conversion.py  # FHIR R4 conversion service
 │   │
 │   └── api/routes/             # API endpoints
 │       ├── health.py           # Health check endpoints
 │       ├── documents.py        # Document CRUD endpoints
 │       ├── llm.py              # LLM endpoints
 │       ├── llm_helpers.py      # Shared LLM utilities
-│       └── rag.py              # RAG endpoints
+│       ├── rag.py              # RAG endpoints
+│       ├── extraction.py       # Agent extraction endpoints
+│       └── fhir.py             # FHIR conversion endpoints
 │
 ├── tests/                      # Test files
 ├── pyproject.toml              # Dependencies
@@ -441,6 +448,7 @@ Content-Type: application/json
 Extract structured clinical data from medical notes using AI agents.
 
 **Features:**
+
 - Extracts diagnoses, medications, vital signs, labs, and plans
 - Enriches diagnoses with ICD-10-CM codes (NLM Clinical Tables API)
 - Enriches medications with RxNorm codes (NLM RxNav API)
@@ -479,6 +487,185 @@ Extract structured clinical data from medical notes using AI agents.
 
 ```bash
 poetry run python tests/test_agent_extraction_api.py
+```
+
+---
+
+#### FHIR Conversion
+
+```http
+POST /fhir/convert
+Content-Type: application/json
+
+{
+  "structured_data": {
+    "patient_info": {"age": "45", "gender": "male"},
+    "diagnoses": [
+      {
+        "text": "Type 2 Diabetes Mellitus",
+        "icd10_code": "E11.9",
+        "icd10_description": "Type 2 diabetes mellitus without complications",
+        "confidence": "exact"
+      }
+    ],
+    "medications": [
+      {
+        "text": "Metformin 500mg",
+        "rxnorm_code": "860975",
+        "rxnorm_name": "Metformin 500 MG Oral Tablet",
+        "confidence": "exact"
+      }
+    ],
+    "vital_signs": {
+      "blood_pressure": "130/85",
+      "heart_rate": "72",
+      "temperature": "98.6°F"
+    },
+    "lab_results": ["HbA1c: 7.2%"],
+    "plan_actions": ["Continue Metformin"]
+  },
+  "patient_id": "patient-123"
+}
+```
+
+Convert structured clinical data (from agent extraction) to FHIR R4 resources.
+
+**Features:**
+
+- Converts to FHIR R4-compliant resources
+- Uses official `fhir.resources` Python library
+- Maps ICD-10-CM codes to Condition resources
+- Maps RxNorm codes to MedicationRequest resources
+- Converts vitals and labs to Observation resources
+- Creates Patient resource from demographics
+
+**Response:**
+
+```json
+{
+  "patient": {
+    "resourceType": "Patient",
+    "id": "patient-123",
+    "gender": "male",
+    "birthDate": "1978-01-01",
+    "identifier": [
+      {
+        "system": "urn:oid:df-healthbench",
+        "value": "patient-123"
+      }
+    ]
+  },
+  "conditions": [
+    {
+      "resourceType": "Condition",
+      "clinicalStatus": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+            "code": "active"
+          }
+        ]
+      },
+      "verificationStatus": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/condition-ver-status",
+            "code": "confirmed"
+          }
+        ]
+      },
+      "code": {
+        "coding": [
+          {
+            "system": "http://hl7.org/fhir/sid/icd-10-cm",
+            "code": "E11.9",
+            "display": "Type 2 diabetes mellitus without complications"
+          }
+        ],
+        "text": "Type 2 Diabetes Mellitus"
+      },
+      "subject": { "reference": "Patient/patient-123" },
+      "recordedDate": "2025-11-30T12:34:56Z"
+    }
+  ],
+  "medications": [
+    {
+      "resourceType": "MedicationRequest",
+      "status": "active",
+      "intent": "order",
+      "medication": {
+        "concept": {
+          "coding": [
+            {
+              "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+              "code": "860975",
+              "display": "Metformin 500 MG Oral Tablet"
+            }
+          ],
+          "text": "Metformin 500mg"
+        }
+      },
+      "subject": { "reference": "Patient/patient-123" },
+      "authoredOn": "2025-11-30T12:34:56Z"
+    }
+  ],
+  "observations": [
+    {
+      "resourceType": "Observation",
+      "status": "final",
+      "category": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+              "code": "vital-signs"
+            }
+          ]
+        }
+      ],
+      "code": {
+        "coding": [
+          {
+            "system": "http://loinc.org",
+            "code": "85354-9",
+            "display": "Blood pressure panel"
+          }
+        ],
+        "text": "Blood pressure panel"
+      },
+      "subject": { "reference": "Patient/patient-123" },
+      "effectiveDateTime": "2025-11-30T12:34:56Z",
+      "valueString": "130/85"
+    }
+  ],
+  "resource_count": 12,
+  "processing_time_ms": 145
+}
+```
+
+**FHIR Resource Mappings:**
+
+| Source Data  | FHIR Resource     | Coding System |
+| ------------ | ----------------- | ------------- |
+| patient_info | Patient           | N/A           |
+| diagnoses    | Condition         | ICD-10-CM     |
+| medications  | MedicationRequest | RxNorm        |
+| vital_signs  | Observation       | LOINC         |
+| lab_results  | Observation       | Text-only     |
+
+**Health Check:**
+
+```http
+GET /fhir/health
+```
+
+Returns service status and FHIR version.
+
+**Testing:**
+
+```bash
+# Integration test (extraction + FHIR conversion)
+poetry run python tests/test_fhir_conversion.py
 ```
 
 ---
@@ -541,13 +728,14 @@ result = llm_service.summarize_note(text)
 - Document summarization by ID (POST `/llm/summarize_document/{id}`)
 - RAG question answering (POST `/rag/answer_question`)
 - Agent-based structured data extraction (POST `/agent/extract_structured`)
+- FHIR R4 conversion (POST `/fhir/convert`)
 - Token usage tracking and processing time metrics
 - Comprehensive error handling (rate limits, timeouts, connection errors)
 
 **Planned:**
 
-- FHIR format conversion
 - Multi-model support
+- Advanced FHIR features (Bundles, CarePlan, Encounter)
 
 ### Error Handling
 
@@ -806,9 +994,22 @@ poetry run pytest --cov=app
 - [x] Comprehensive error handling and logging
 - [x] Test script for API validation
 
+**Part 5: FHIR Conversion**
+
+- [x] fhir.resources library integration (v8.1.0)
+- [x] FHIR R4 conversion service with singleton pattern
+- [x] Patient resource mapping (demographics → FHIR Patient)
+- [x] Condition resource mapping (ICD-10-CM codes → FHIR Condition)
+- [x] MedicationRequest resource mapping (RxNorm codes → FHIR MedicationRequest)
+- [x] Observation resource mapping (vitals with LOINC codes + labs)
+- [x] FHIR conversion endpoint (`POST /fhir/convert`)
+- [x] FHIR health check endpoint (`GET /fhir/health`)
+- [x] Integration test script
+- [x] Comprehensive documentation with examples
+- [x] Notebook prototyping and validation
+
 ### 🚧 Next Steps
 
-- [ ] Part 5: FHIR Conversion (Patient, Condition, Medication resources)
 - [ ] Part 6: Containerization (Dockerfile, full docker-compose)
 
 ---
