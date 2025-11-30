@@ -29,10 +29,25 @@ The application will automatically:
 
 - Initialize PostgreSQL with PGVector extension
 - Create database tables
-- Seed SOAP notes from `med_docs/soap/`
+- Seed documents from `med_docs/soap/` (SOAP notes) and `med_docs/policy/` (PDF policies)
 - Generate vector embeddings for RAG
 
 This takes about 30-60 seconds on first startup.
+
+### Adding New Documents
+
+To add new medical documents:
+
+1. Add `.txt` or `.pdf` files to `med_docs/soap/` or `med_docs/policy/`
+2. Restart the application: `docker-compose restart backend`
+3. The system will automatically detect and seed new documents
+4. View logs to confirm: `docker-compose logs -f backend | grep -i seed`
+
+Or manually trigger re-seeding:
+
+```bash
+docker-compose exec backend python -m app.seed
+```
 
 ## What's Included
 

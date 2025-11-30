@@ -161,10 +161,11 @@ def seed_documents(db: Session, force: bool = False) -> int:
     Seed the database with medical documents (SOAP notes and policy documents).
     
     Supports both .txt and .pdf files from the med_docs/ directory.
+    Intelligently detects new documents by comparing available files with database count.
     
     Args:
         db: Database session
-        force: If True, seed even if documents already exist
+        force: If True, re-seed all documents even if they exist
         
     Returns:
         Number of documents created
@@ -172,14 +173,6 @@ def seed_documents(db: Session, force: bool = False) -> int:
     Raises:
         FileNotFoundError: If medical docs directory not found
     """
-    # Check if documents already exist
-    existing_docs = DocumentService.get_all_document_ids(db)
-    
-    if existing_docs.count > 0 and not force:
-        logger.info(f"Database already contains {existing_docs.count} documents. Skipping seed.")
-        logger.info("Use force=True to seed anyway.")
-        return 0
-    
     # Get medical docs directory
     med_docs_dir = get_medical_docs_directory()
     
@@ -194,7 +187,31 @@ def seed_documents(db: Session, force: bool = False) -> int:
         logger.warning(f"No document files found in {med_docs_dir}")
         return 0
     
-    logger.info(f"Found {len(doc_files)} documents to load:")
+    # Check existing documents
+    existing_docs = DocumentService.get_all_document_ids(db)
+    available_files_count = len(doc_files)
+    existing_db_count = existing_docs.count
+    
+    logger.info(f"Found {available_files_count} document files in med_docs/")
+    logger.info(f"Database currently contains {existing_db_count} documents")
+    
+    # Intelligent seeding logic
+    if force:
+        logger.info("Force flag set - will re-seed all documents")
+    elif existing_db_count >= available_files_count:
+        logger.info(
+            f"Database has {existing_db_count} documents, "
+            f"same or more than available files ({available_files_count}). Skipping seed."
+        )
+        logger.info("Use --force flag to re-seed anyway.")
+        return 0
+    elif existing_db_count > 0:
+        logger.info(
+            f"⚠️  Database has {existing_db_count} documents but {available_files_count} files available. "
+            f"New documents detected! Seeding {available_files_count - existing_db_count} new documents..."
+        )
+    
+    logger.info(f"Processing {len(doc_files)} document files:")
     
     # Group by type for logging
     txt_files = [f for f in doc_files if f.suffix == '.txt']
@@ -202,16 +219,31 @@ def seed_documents(db: Session, force: bool = False) -> int:
     logger.info(f"  - {len(txt_files)} text files")
     logger.info(f"  - {len(pdf_files)} PDF files")
     
+    # Get existing document titles to avoid duplicates (unless force=True)
+    existing_titles = set()
+    if not force and existing_db_count > 0:
+        logger.info("Fetching existing document titles to avoid duplicates...")
+        existing_documents = DocumentService.get_all_documents(db, skip=0, limit=1000)
+        existing_titles = {doc.title for doc in existing_documents}
+        logger.info(f"Found {len(existing_titles)} existing documents in database")
+    
     # Load and create documents
     created_count = 0
+    skipped_count = 0
     failed_count = 0
     
     for doc_file in doc_files:
         try:
-            logger.info(f"Loading {doc_file.relative_to(med_docs_dir)}...")
-            
             # Load content (handles both txt and pdf)
             title, content = load_document(doc_file)
+            
+            # Check if document already exists (skip duplicates unless force=True)
+            if not force and title in existing_titles:
+                logger.debug(f"⏭️  Skipping {doc_file.name}: already exists in database")
+                skipped_count += 1
+                continue
+            
+            logger.info(f"Loading {doc_file.relative_to(med_docs_dir)}...")
             
             # Validate content
             if not content or len(content.strip()) < 10:
@@ -231,7 +263,11 @@ def seed_documents(db: Session, force: bool = False) -> int:
             failed_count += 1
             continue
     
-    logger.info(f"Successfully seeded {created_count} documents ({failed_count} failed)")
+    logger.info(
+        f"Seeding complete: {created_count} created, "
+        f"{skipped_count} skipped (already exist), "
+        f"{failed_count} failed"
+    )
     
     return created_count
 
