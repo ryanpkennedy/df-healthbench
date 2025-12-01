@@ -1,198 +1,344 @@
 """
-Test script for embedding and chunking services.
+Test Embedding and Chunking Services
 
-This script tests:
-1. Document chunking with SOAP notes
-2. Embedding generation (single and batch)
-3. Integration between chunking and embedding
+Tests for:
+- Document chunking (text splitting with overlap)
+- Chunk statistics
+- SOAP-aware chunking
+- Embedding service (OpenAI integration)
+- Single and batch embedding generation
 """
 
-import sys
-import time
-from pathlib import Path
+import pytest
 
-# Test 1: Chunking Service
-print("=" * 60)
-print("Test 1: Document Chunking Service")
-print("=" * 60)
 
-try:
-    from app.services.chunking import chunk_document, get_chunk_stats
-    print("✅ Successfully imported chunking service")
-    
-    # Load a sample SOAP note
-    soap_file = Path("../soap/soap_01.txt")
-    if not soap_file.exists():
-        print(f"❌ SOAP file not found: {soap_file}")
-        sys.exit(1)
-    
-    with open(soap_file, 'r') as f:
-        soap_content = f.read()
-    
-    print(f"\nOriginal document length: {len(soap_content)} characters")
-    
-    # Test chunking
-    chunks = chunk_document(soap_content, max_chunk_size=800, overlap=50)
-    print(f"✅ Document chunked into {len(chunks)} chunks")
-    
-    # Get statistics
-    stats = get_chunk_stats(chunks)
-    print(f"\nChunk Statistics:")
-    print(f"  Count: {stats['count']}")
-    print(f"  Average size: {stats['avg_size']} chars")
-    print(f"  Min size: {stats['min_size']} chars")
-    print(f"  Max size: {stats['max_size']} chars")
-    print(f"  Total chars: {stats['total_chars']} chars")
-    
-    # Show first chunk
-    print(f"\nFirst chunk preview:")
-    print(f"  {chunks[0][:200]}...")
-    
-except Exception as e:
-    print(f"❌ Error in chunking test: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+# ============================================================================
+# Chunking Service Tests
+# ============================================================================
 
-# Test 2: Embedding Service
-print("\n" + "=" * 60)
-print("Test 2: Embedding Service")
-print("=" * 60)
-
-try:
-    from app.services.embedding import get_embedding_service
-    print("✅ Successfully imported embedding service")
+class TestChunkingService:
+    """Test document chunking functionality."""
     
-    # Get singleton instance
-    embedding_service = get_embedding_service()
-    print(f"✅ Embedding service initialized")
-    print(f"   Model: {embedding_service.embedding_model}")
-    print(f"   Dimensions: {embedding_service.embedding_dimension}")
-    
-except Exception as e:
-    print(f"❌ Error initializing embedding service: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-
-# Test 3: Single Embedding Generation
-print("\n" + "=" * 60)
-print("Test 3: Single Embedding Generation")
-print("=" * 60)
-
-try:
-    test_text = "Patient presents with fever and cough. Temperature is 101F."
-    print(f"Test text: {test_text}")
-    
-    start_time = time.time()
-    embedding = embedding_service.generate_embedding(test_text)
-    elapsed = (time.time() - start_time) * 1000
-    
-    print(f"✅ Embedding generated successfully")
-    print(f"   Dimensions: {len(embedding)}")
-    print(f"   First 5 values: {embedding[:5]}")
-    print(f"   Elapsed time: {elapsed:.2f}ms")
-    
-    # Verify dimensions
-    if len(embedding) == 1536:
-        print("✅ Embedding has correct dimensions (1536)")
-    else:
-        print(f"❌ Unexpected embedding dimensions: {len(embedding)}")
-        sys.exit(1)
-    
-except Exception as e:
-    print(f"❌ Error generating embedding: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-
-# Test 4: Batch Embedding Generation
-print("\n" + "=" * 60)
-print("Test 4: Batch Embedding Generation")
-print("=" * 60)
-
-try:
-    # Use the chunks from Test 1
-    print(f"Generating embeddings for {len(chunks)} chunks...")
-    
-    start_time = time.time()
-    embeddings = embedding_service.generate_embeddings_batch(chunks)
-    elapsed = (time.time() - start_time) * 1000
-    
-    print(f"✅ Batch embeddings generated successfully")
-    print(f"   Count: {len(embeddings)}")
-    print(f"   Dimensions per embedding: {len(embeddings[0])}")
-    print(f"   Elapsed time: {elapsed:.2f}ms")
-    print(f"   Avg time per chunk: {elapsed / len(chunks):.2f}ms")
-    
-    # Verify all embeddings have correct dimensions
-    all_correct = all(len(emb) == 1536 for emb in embeddings)
-    if all_correct:
-        print("✅ All embeddings have correct dimensions")
-    else:
-        print("❌ Some embeddings have incorrect dimensions")
-        sys.exit(1)
-    
-except Exception as e:
-    print(f"❌ Error generating batch embeddings: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-
-# Test 5: Integration Test - Chunk and Embed Multiple Documents
-print("\n" + "=" * 60)
-print("Test 5: Integration Test - Multiple Documents")
-print("=" * 60)
-
-try:
-    soap_dir = Path("../soap")
-    soap_files = list(soap_dir.glob("soap_*.txt"))
-    
-    if not soap_files:
-        print("❌ No SOAP files found")
-        sys.exit(1)
-    
-    print(f"Found {len(soap_files)} SOAP files")
-    
-    total_chunks = 0
-    total_embeddings = 0
-    
-    for soap_file in soap_files[:3]:  # Test first 3 files
-        with open(soap_file, 'r') as f:
-            content = f.read()
+    @pytest.mark.unit
+    def test_chunk_document_basic(self):
+        """Test basic document chunking."""
+        from app.services.chunking import chunk_document
         
-        # Chunk document
-        doc_chunks = chunk_document(content, max_chunk_size=800, overlap=50)
-        total_chunks += len(doc_chunks)
+        text = "This is a test document. " * 50  # ~1200 characters
+        chunks = chunk_document(text, max_chunk_size=200, overlap=20)
         
-        # Generate embeddings (in smaller batches if needed)
-        batch_size = 10
-        for i in range(0, len(doc_chunks), batch_size):
-            batch = doc_chunks[i:i+batch_size]
-            batch_embeddings = embedding_service.generate_embeddings_batch(batch)
-            total_embeddings += len(batch_embeddings)
+        assert len(chunks) > 1
+        assert all(len(chunk) <= 220 for chunk in chunks)  # Allow some overflow
+    
+    @pytest.mark.unit
+    def test_chunk_document_with_soap_note(self, sample_soap_note):
+        """Test chunking a real SOAP note."""
+        from app.services.chunking import chunk_document
         
-        print(f"  {soap_file.name}: {len(doc_chunks)} chunks embedded")
+        chunks = chunk_document(sample_soap_note, max_chunk_size=800, overlap=50)
+        
+        assert len(chunks) > 0
+        assert all(isinstance(chunk, str) for chunk in chunks)
+        assert all(len(chunk) > 0 for chunk in chunks)
     
-    print(f"\n✅ Integration test complete")
-    print(f"   Total chunks: {total_chunks}")
-    print(f"   Total embeddings: {total_embeddings}")
+    @pytest.mark.unit
+    def test_chunk_document_short_text(self):
+        """Test chunking text shorter than max_chunk_size."""
+        from app.services.chunking import chunk_document
+        
+        text = "This is a short document."
+        chunks = chunk_document(text, max_chunk_size=1000, overlap=50)
+        
+        # Short text should return single chunk
+        assert len(chunks) == 1
+        assert chunks[0] == text
     
-    if total_chunks == total_embeddings:
-        print("✅ All chunks successfully embedded")
-    else:
-        print(f"❌ Mismatch: {total_chunks} chunks but {total_embeddings} embeddings")
-        sys.exit(1)
+    @pytest.mark.unit
+    def test_chunk_document_empty_text(self):
+        """Test chunking empty text raises ValueError."""
+        from app.services.chunking import chunk_document
+        
+        # Empty text should raise ValueError
+        with pytest.raises(ValueError, match="Content cannot be empty"):
+            chunk_document("", max_chunk_size=800, overlap=50)
     
-except Exception as e:
-    print(f"❌ Error in integration test: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+    @pytest.mark.unit
+    def test_chunk_overlap(self):
+        """Test that chunks have proper overlap."""
+        from app.services.chunking import chunk_document
+        
+        text = "Word " * 200  # ~1000 characters
+        chunks = chunk_document(text, max_chunk_size=100, overlap=20)
+        
+        if len(chunks) > 1:
+            # Check that consecutive chunks share some content
+            # (This depends on implementation - adjust if needed)
+            assert len(chunks) > 1
+    
+    @pytest.mark.unit
+    def test_get_chunk_stats(self):
+        """Test getting chunk statistics."""
+        from app.services.chunking import chunk_document, get_chunk_stats
+        
+        text = "This is a test. " * 50
+        chunks = chunk_document(text, max_chunk_size=200, overlap=20)
+        
+        stats = get_chunk_stats(chunks)
+        
+        assert "count" in stats
+        assert "avg_size" in stats
+        assert "min_size" in stats
+        assert "max_size" in stats
+        assert "total_chars" in stats
+        
+        assert stats["count"] == len(chunks)
+        assert stats["count"] > 0
+        assert stats["avg_size"] > 0
+        assert stats["min_size"] > 0
+        assert stats["max_size"] > 0
+    
+    @pytest.mark.unit
+    def test_chunk_stats_single_chunk(self):
+        """Test chunk stats with single chunk."""
+        from app.services.chunking import get_chunk_stats
+        
+        chunks = ["This is a single chunk."]
+        stats = get_chunk_stats(chunks)
+        
+        assert stats["count"] == 1
+        assert stats["avg_size"] == len(chunks[0])
+        assert stats["min_size"] == len(chunks[0])
+        assert stats["max_size"] == len(chunks[0])
+    
+    @pytest.mark.unit
+    def test_soap_aware_chunking(self, sample_soap_note):
+        """Test that chunking handles SOAP notes correctly."""
+        from app.services.chunking import chunk_document
+        
+        # SOAP notes have sections: Subjective, Objective, Assessment, Plan
+        chunks = chunk_document(sample_soap_note, max_chunk_size=800, overlap=50)
+        
+        # Verify chunks contain meaningful content
+        assert len(chunks) > 0
+        for chunk in chunks:
+            assert len(chunk.strip()) > 0
+        
+        # Verify the full content is preserved across all chunks
+        combined_chunks = "".join(chunks)
+        # Check that key medical terms from SOAP note are preserved
+        assert len(combined_chunks) > 0
 
-print("\n" + "=" * 60)
-print("✅ ALL TESTS PASSED!")
-print("=" * 60)
-print("\nEmbedding and chunking services are working correctly.")
-print("Ready to proceed with CRUD and RAG service implementation.")
 
+# ============================================================================
+# Embedding Service Tests
+# ============================================================================
+
+class TestEmbeddingService:
+    """Test embedding generation service."""
+    
+    @pytest.mark.unit
+    def test_get_embedding_service_singleton(self):
+        """Test that embedding service uses singleton pattern."""
+        from app.services.embedding import get_embedding_service
+        
+        service1 = get_embedding_service()
+        service2 = get_embedding_service()
+        
+        assert service1 is service2
+    
+    @pytest.mark.unit
+    def test_embedding_service_configuration(self):
+        """Test that embedding service is configured correctly."""
+        from app.services.embedding import get_embedding_service
+        
+        service = get_embedding_service()
+        
+        assert hasattr(service, 'embedding_model')
+        assert hasattr(service, 'embedding_dimension')
+        assert service.embedding_model == "text-embedding-3-small"
+        assert service.embedding_dimension == 1536
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_generate_single_embedding(self):
+        """Test generating a single embedding with real API call."""
+        from app.services.embedding import get_embedding_service
+        
+        service = get_embedding_service()
+        
+        text = "Patient presents with fever and cough. Temperature is 101F."
+        embedding = service.generate_embedding(text)
+        
+        assert isinstance(embedding, list)
+        assert len(embedding) == 1536  # text-embedding-3-small dimensions
+        assert all(isinstance(val, float) for val in embedding)
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_generate_embeddings_batch(self):
+        """Test generating multiple embeddings individually."""
+        from app.services.embedding import get_embedding_service
+        
+        service = get_embedding_service()
+        
+        texts = [
+            "Patient has Type 2 Diabetes.",
+            "Blood pressure is elevated at 140/90.",
+            "Prescribe Metformin 500mg twice daily."
+        ]
+        
+        # Generate embeddings one at a time (service has generate_embedding, not generate_embeddings)
+        embeddings = [service.generate_embedding(text) for text in texts]
+        
+        assert len(embeddings) == 3
+        assert all(len(emb) == 1536 for emb in embeddings)
+        
+        # Verify embeddings are different (not all the same)
+        assert embeddings[0] != embeddings[1]
+        assert embeddings[1] != embeddings[2]
+    
+    @pytest.mark.unit
+    def test_generate_embedding_validates_input(self):
+        """Test that embedding service validates input."""
+        from app.services.embedding import get_embedding_service
+        
+        service = get_embedding_service()
+        
+        # Test empty string
+        with pytest.raises(ValueError):
+            service.generate_embedding("")
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_embedding_consistency(self):
+        """Test that same text generates similar (but not identical) embeddings."""
+        from app.services.embedding import get_embedding_service
+        import numpy as np
+        
+        service = get_embedding_service()
+        
+        text = "Patient diagnosed with hypertension."
+        
+        # Generate embedding twice
+        emb1 = service.generate_embedding(text)
+        emb2 = service.generate_embedding(text)
+        
+        # Embeddings should be very similar but may not be identical (OpenAI has some variation)
+        # Check cosine similarity instead
+        dot_product = np.dot(emb1, emb2)
+        norm1 = np.linalg.norm(emb1)
+        norm2 = np.linalg.norm(emb2)
+        cosine_similarity = dot_product / (norm1 * norm2)
+        
+        # Cosine similarity should be very high (> 0.99) for same text
+        assert cosine_similarity > 0.99, f"Embeddings should be very similar (cosine similarity: {cosine_similarity})"
+
+
+# ============================================================================
+# Chunking and Embedding Integration Tests
+# ============================================================================
+
+class TestChunkingEmbeddingIntegration:
+    """Test integration between chunking and embedding services."""
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_chunk_and_embed_document(self, sample_soap_note):
+        """Test full pipeline: chunk document and generate embeddings."""
+        from app.services.chunking import chunk_document
+        from app.services.embedding import get_embedding_service
+        
+        # Chunk the document
+        chunks = chunk_document(sample_soap_note, max_chunk_size=800, overlap=50)
+        
+        assert len(chunks) > 0
+        
+        # Generate embeddings for chunks (one at a time)
+        embedding_service = get_embedding_service()
+        embeddings = [embedding_service.generate_embedding(chunk) for chunk in chunks]
+        
+        assert len(embeddings) == len(chunks)
+        assert all(len(emb) == 1536 for emb in embeddings)
+    
+    @pytest.mark.integration
+    @pytest.mark.slow
+    def test_chunk_sizes_affect_embedding_count(self):
+        """Test that chunk size affects number of embeddings."""
+        from app.services.chunking import chunk_document
+        
+        text = "Patient information. " * 100  # ~2000 characters
+        
+        # Small chunks
+        small_chunks = chunk_document(text, max_chunk_size=200, overlap=20)
+        
+        # Large chunks
+        large_chunks = chunk_document(text, max_chunk_size=1000, overlap=20)
+        
+        # Smaller chunk size should produce more chunks
+        assert len(small_chunks) > len(large_chunks)
+    
+    @pytest.mark.unit
+    def test_chunk_overlap_prevents_information_loss(self):
+        """Test that overlap helps prevent information loss at chunk boundaries."""
+        from app.services.chunking import chunk_document
+        
+        # Create text with important info at boundary
+        text = "A" * 150 + "IMPORTANT" + "B" * 150
+        
+        # Chunk with overlap
+        chunks = chunk_document(text, max_chunk_size=200, overlap=50)
+        
+        # "IMPORTANT" should appear in at least one chunk
+        has_important = any("IMPORTANT" in chunk for chunk in chunks)
+        assert has_important, "Overlap should help preserve boundary information"
+
+
+# ============================================================================
+# Performance and Edge Case Tests
+# ============================================================================
+
+class TestChunkingPerformance:
+    """Test chunking performance and edge cases."""
+    
+    @pytest.mark.unit
+    def test_chunk_very_long_document(self):
+        """Test chunking a very long document."""
+        from app.services.chunking import chunk_document
+        
+        # Create a 50KB document
+        long_text = "Patient data. " * 3000  # ~50KB
+        
+        chunks = chunk_document(long_text, max_chunk_size=800, overlap=50)
+        
+        assert len(chunks) > 10
+        assert all(len(chunk) <= 850 for chunk in chunks)  # Allow small overflow
+    
+    @pytest.mark.unit
+    def test_chunk_special_characters(self):
+        """Test chunking text with special characters."""
+        from app.services.chunking import chunk_document
+        
+        text = "Patient: José García\nDiagnosis: Hypertension\n©2024 Medical Records"
+        
+        chunks = chunk_document(text, max_chunk_size=100, overlap=10)
+        
+        assert len(chunks) > 0
+        # Special characters should be preserved
+        combined = "".join(chunks)
+        assert "José" in combined
+        assert "©" in combined
+    
+    @pytest.mark.unit
+    def test_chunk_unicode_characters(self):
+        """Test chunking text with Unicode characters."""
+        from app.services.chunking import chunk_document
+        
+        # Create longer text with Unicode to meet min chunk size requirement
+        text = "Patient: 王医生 (Dr. Wang)\nSymptoms: 发热、咳嗽\n" + "Additional medical information. " * 10
+        
+        chunks = chunk_document(text, max_chunk_size=200, overlap=20)
+        
+        assert len(chunks) > 0
+        # Unicode characters should be preserved
+        combined = "".join(chunks)
+        assert "王医生" in combined

@@ -44,6 +44,13 @@ python_functions = ["test_*"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-v --tb=short"
+markers = [
+    "unit: Unit tests (fast, no external dependencies)",
+    "integration: Integration tests (requires DB and services)",
+    "e2e: End-to-end tests (requires running server)",
+    "api: API endpoint tests",
+    "slow: Slow tests (LLM calls, external APIs)"
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

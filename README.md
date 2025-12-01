@@ -1,6 +1,6 @@
 # DF HealthBench
 
-AI-powered medical document processing system using LLMs, RAG, and FHIR standards. This README discusses startup, testing, and basic app functionality. See `backend/README.md` for comprehensive backend documentation.
+AI-powered medical document processing system using LLMs, RAG, and FHIR standards. This README discusses startup, testing, and basic app functionality. See `backend/README.md` for comprehensive backend documentation
 
 To view a quick summary of all of the project tasks that were complete, refer to project_completion.md in this repo.
 
@@ -71,11 +71,17 @@ Or manually trigger re-seeding:
 docker-compose exec backend python -m app.seed
 ```
 
-# Testing the Backend Endpoints
+## Testing the Backend Endpoints
+
+#### Manual Testing
 
 The simplest way to test the endpoints is to go to http://localhost:8000/docs. This allows you to view all of the endpoints through a web UI, with instructions and example requests to try out.
 
 It is helpful to view the log output while the backend is processing requests. Use `docker-compose logs -f` to view backend logs.
+
+#### Automated Testing
+
+There is also a comprehensive pytest test suite with 140+ tests covering all 5 core project parts. See `add_docs/testing.md` for details.
 
 ## What's Included
 
