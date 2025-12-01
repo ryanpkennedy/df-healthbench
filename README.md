@@ -1,27 +1,49 @@
 # DF HealthBench
 
-AI-powered medical document processing system using LLMs, RAG, and FHIR standards.
+AI-powered medical document processing system using LLMs, RAG, and FHIR standards. This README discusses startup, testing, and basic app functionality. See `backend/README.md` for comprehensive backend documentation.
+
+To view a quick summary of all of the project tasks that were complete, refer to project_completion.md in this repo.
 
 ## Quick Start with Docker
 
-The easiest way to run the entire application is with Docker Compose:
+The easiest way to run the entire application is with the Make command or Docker Compose:
+
+#### 1. Ensure Docker and Docker Compose are installed
 
 ```bash
-# 1. Ensure Docker and Docker Compose are installed
 docker --version
 docker-compose --version
-
-# 2. Start all services (database + backend)
-docker-compose up -d
-
-# 3. View logs
-docker-compose logs -f
-
-# 4. Access the application
-# - API: http://localhost:8000
-# - Interactive API docs: http://localhost:8000/docs
-# - ReDoc: http://localhost:8000/redoc
 ```
+
+#### 2. Environment Variable Setup
+
+Copy the `backend/.env.example` into a `backend/.env` and make sure to add your own OpenAI API key. There are 2 different database connection strings based on whether you are running the backend via docker (default) or on its own via uvicorn, since the backend needs to reference the db server name differently depending on if it is running in the same docker network or not.
+
+#### 3. Start all services (database + backend)
+
+```bash
+make up
+```
+
+or
+
+```bash
+docker-compose up -d
+```
+
+#### 4. View logs
+
+```bash
+docker-compose logs -f
+```
+
+#### 5. Access the application
+
+- API: http://localhost:8000
+
+- Interactive API docs: http://localhost:8000/docs
+
+- ReDoc: http://localhost:8000/redoc
 
 ### First Time Setup
 
@@ -48,6 +70,12 @@ Or manually trigger re-seeding:
 ```bash
 docker-compose exec backend python -m app.seed
 ```
+
+# Testing the Backend Endpoints
+
+The simplest way to test the endpoints is to go to http://localhost:8000/docs. This allows you to view all of the endpoints through a web UI, with instructions and example requests to try out.
+
+It is helpful to view the log output while the backend is processing requests. Use `docker-compose logs -f` to view backend logs.
 
 ## What's Included
 
@@ -391,15 +419,3 @@ docker-compose logs postgres
 - **API Reference:** http://localhost:8000/docs (when running)
 - **Sprint Plans:** See `backend/sprints/` for detailed implementation plans
 - **Project Overview:** See `project_overview.md` for assignment details
-
-## License
-
-Private - DF Project
-
-## Support
-
-For questions or issues, refer to the documentation or contact the development team.
-
----
-
-**Project Status:** ✅ All 6 parts complete and production-ready!

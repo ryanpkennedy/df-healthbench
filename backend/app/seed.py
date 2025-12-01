@@ -25,7 +25,15 @@ def get_medical_docs_directory() -> Path:
     Returns:
         Path object pointing to the med_docs/ directory
     """
-    # Navigate from backend/app/seed.py to project root/med_docs/
+    # In Docker: /app/med_docs
+    # Locally: navigate from backend/app/seed.py to project root/med_docs/
+    
+    # Try Docker path first
+    docker_path = Path("/app/med_docs")
+    if docker_path.exists():
+        return docker_path
+    
+    # Fall back to local development path
     backend_dir = Path(__file__).parent.parent
     project_root = backend_dir.parent
     med_docs_dir = project_root / "med_docs"
