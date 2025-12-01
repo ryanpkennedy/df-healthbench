@@ -2,11 +2,13 @@
 
 AI-powered medical document processing system using LLMs, RAG, and FHIR standards. This README discusses startup, testing, and basic app functionality. See `backend/README.md` for comprehensive backend documentation
 
-To view a quick summary of all of the project tasks that were complete, refer to project_completion.md in this repo.
+To view a quick summary of all of the project tasks that were complete, refer to `project_completion.md` in this repo. A detailed breakdown of how I completed each task is available in the `/sprints` folder.
 
 ## Quick Start with Docker
 
-The easiest way to run the entire application is with the Make command or Docker Compose. Make sure .env is ready to go then simply running `make fresh-start` will start the backend, db and seed the db. Then `make test` will run the full pytest test suite. A more granular approach is shown below.
+The easiest way to run the entire application is with the Make command or Docker Compose. Make sure .env is ready to go then simply run `make fresh-start` to start the backend, db and seed the db. If you ever want to reset the db, and have a clean start with the app, you can rerun `make fresh-start`.
+
+Once the app is up and running, then `make test` will run the full pytest test suite. A more granular approach is shown below.
 
 #### 1. Ensure Docker and Docker Compose are installed
 
@@ -75,13 +77,13 @@ docker-compose exec backend python -m app.seed
 
 #### Manual Testing
 
-The simplest way to test the endpoints is to go to http://localhost:8000/docs. This allows you to view all of the endpoints through a web UI, with instructions and example requests to try out.
+The simplest way to interact with the endpoints is to go to http://localhost:8000/docs. This allows you to view all of the endpoints through a web UI, with instructions and example requests to try out.
 
-It is helpful to view the log output while the backend is processing requests. Use `docker-compose logs -f` to view backend logs.
+It is helpful to view the log output while the backend is processing requests, to see what is going on in the backend. Use `docker-compose logs -f` to view backend logs.
 
 #### Automated Testing
 
-There is also a comprehensive pytest test suite with 140+ tests covering all 5 core project parts. See `add_docs/testing.md` for details.
+There is also a comprehensive pytest test suite with 140+ tests covering all 5 core project parts. See `add_docs/testing.md` for details. As previously mentioned, `make test` will run the whole test suite.
 
 ## What's Included
 
