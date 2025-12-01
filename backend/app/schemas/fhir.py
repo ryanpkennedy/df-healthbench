@@ -8,13 +8,26 @@ from pydantic import BaseModel, Field
 from app.schemas.extraction import StructuredClinicalData
 
 
-class FHIRConversionRequest(BaseModel):
-    """Request schema for FHIR conversion."""
+class FHIRConversionRequest(StructuredClinicalData):
+    """
+    Request schema for FHIR conversion.
     
-    structured_data: StructuredClinicalData = Field(
-        ...,
-        description="Structured clinical data from agent extraction"
+    This schema extends StructuredClinicalData and matches the structure of 
+    ExtractionResponse, allowing you to directly pass the extraction endpoint's
+    response as input to the FHIR conversion endpoint.
+    """
+    
+    # Optional metadata fields from ExtractionResponse (ignored during conversion)
+    processing_time_ms: Optional[int] = Field(
+        None,
+        description="Processing time from extraction (optional, will be ignored)"
     )
+    model_used: Optional[str] = Field(
+        None,
+        description="Model used for extraction (optional, will be ignored)"
+    )
+    
+    # Patient identifier for FHIR resources
     patient_id: Optional[str] = Field(
         default="unknown",
         description="Patient identifier (if known)"
@@ -23,36 +36,36 @@ class FHIRConversionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "structured_data": {
-                    "patient_info": {
-                        "age": "45",
-                        "gender": "male"
-                    },
-                    "diagnoses": [
-                        {
-                            "text": "Type 2 Diabetes Mellitus",
-                            "icd10_code": "E11.9",
-                            "icd10_description": "Type 2 diabetes mellitus without complications",
-                            "confidence": "exact"
-                        }
-                    ],
-                    "medications": [
-                        {
-                            "text": "Metformin 500mg",
-                            "rxnorm_code": "860975",
-                            "rxnorm_name": "Metformin 500 MG Oral Tablet",
-                            "confidence": "exact"
-                        }
-                    ],
-                    "vital_signs": {
-                        "blood_pressure": "130/85",
-                        "heart_rate": "72",
-                        "temperature": "98.6°F"
-                    },
-                    "lab_results": ["HbA1c: 7.2%"],
-                    "plan_actions": ["Continue current medications"]
+                "patient_info": {
+                    "age": "45",
+                    "gender": "male"
                 },
-                "patient_id": "patient-123"
+                "diagnoses": [
+                    {
+                        "text": "Type 2 Diabetes Mellitus",
+                        "icd10_code": "E11.9",
+                        "icd10_description": "Type 2 diabetes mellitus without complications",
+                        "confidence": "exact"
+                    }
+                ],
+                "medications": [
+                    {
+                        "text": "Metformin 500mg",
+                        "rxnorm_code": "860975",
+                        "rxnorm_name": "Metformin 500 MG Oral Tablet",
+                        "confidence": "exact"
+                    }
+                ],
+                "vital_signs": {
+                    "blood_pressure": "130/85",
+                    "heart_rate": "72",
+                    "temperature": "98.6°F"
+                },
+                "lab_results": ["HbA1c: 7.2%"],
+                "plan_actions": ["Continue current medications"],
+                "patient_id": "patient-123",
+                "processing_time_ms": 5432,
+                "model_used": "gpt-4o-mini"
             }
         }
 

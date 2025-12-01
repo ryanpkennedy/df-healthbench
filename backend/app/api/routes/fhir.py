@@ -24,6 +24,9 @@ router = APIRouter()
     description="""
     Convert structured clinical data (from agent extraction) to FHIR R4-compliant resources.
     
+    **Note:** You can directly copy the JSON response from the `/agent/extract_structured` 
+    endpoint and use it as input here (just add a `patient_id` field if desired).
+    
     **Conversions:**
     - patient_info → Patient (demographics)
     - diagnoses (with ICD-10-CM) → Condition (clinical conditions)
@@ -67,9 +70,9 @@ async def convert_to_fhir(request: FHIRConversionRequest) -> FHIRConversionRespo
         # Get FHIR service (singleton)
         fhir_service = get_fhir_service()
         
-        # Convert to FHIR
+        # Convert to FHIR (request extends StructuredClinicalData, so pass it directly)
         fhir_resources = fhir_service.convert_to_fhir(
-            structured_data=request.structured_data,
+            structured_data=request,
             patient_id=request.patient_id
         )
         
@@ -104,34 +107,3 @@ async def convert_to_fhir(request: FHIRConversionRequest) -> FHIRConversionRespo
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"FHIR conversion failed: {str(e)}"
         )
-
-
-@router.get(
-    "/health",
-    summary="FHIR service health check",
-    description="Check if the FHIR conversion service is operational"
-)
-async def fhir_health_check() -> Dict[str, Any]:
-    """
-    Health check for FHIR conversion service.
-    
-    Returns:
-        Dict with status and service information
-        
-    Raises:
-        HTTPException: 503 if service is unavailable
-    """
-    try:
-        fhir_service = get_fhir_service()
-        return {
-            "status": "ok",
-            "service": "FHIR Conversion",
-            "fhir_version": "R4"
-        }
-    except Exception as e:
-        logger.error(f"FHIR health check failed: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="FHIR service unavailable"
-        )
-

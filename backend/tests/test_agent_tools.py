@@ -17,43 +17,98 @@ from app.services.agent_extraction import lookup_icd10_code_func, lookup_rxnorm_
 
 
 class TestICD10Lookup:
-    """Test ICD-10-CM code lookup tool."""
+    """Test ICD-10-CM code lookup tool with LLM-based selection."""
     
     @pytest.mark.asyncio
+    @patch('app.services.agent_extraction.OpenAI')
     @patch('httpx.AsyncClient')
-    async def test_icd10_exact_match(self, mock_client_class):
-        """Test successful ICD-10 code lookup with exact match."""
-        # Mock the async client context manager and get method
+    async def test_icd10_single_result(self, mock_client_class, mock_openai_class):
+        """Test ICD-10 lookup when only one code is found (no LLM needed)."""
+        # Mock the async HTTP client
         mock_client = AsyncMock()
         mock_client_class.return_value.__aenter__.return_value = mock_client
         
-        # Mock successful API response
+        # Mock API response with single result
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = [
-            2,  # Count
-            ["E11.9", "E11.65"],  # Codes
+            1,  # Count - only one match
+            ["J00"],
+            None,
+            [["J00", "Acute nasopharyngitis (common cold)"]]
+        ]
+        mock_response.raise_for_status = Mock()
+        mock_client.get.return_value = mock_response
+        
+        # Test the function (should not call LLM for single result)
+        result = await lookup_icd10_code_func(
+            detailed_term="Viral upper respiratory infection",
+            simplified_term="upper respiratory infection"
+        )
+        
+        # Assertions
+        assert result["code"] == "J00"
+        assert "nasopharyngitis" in result["description"]
+        assert result["confidence"] == "exact"
+        assert result["total_matches"] == 1
+        assert result["all_codes"] == [{"code": "J00", "description": "Acute nasopharyngitis (common cold)"}]
+        
+        # Verify LLM was NOT called (only one result)
+        assert not mock_openai_class.called
+    
+    @pytest.mark.asyncio
+    @patch('app.services.agent_extraction.OpenAI')
+    @patch('httpx.AsyncClient')
+    async def test_icd10_multiple_results_llm_selection(self, mock_client_class, mock_openai_class):
+        """Test ICD-10 lookup with multiple results - uses LLM to select best match."""
+        # Mock the async HTTP client
+        mock_client = AsyncMock()
+        mock_client_class.return_value.__aenter__.return_value = mock_client
+        
+        # Mock API response with multiple asthma codes
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = [
+            19,  # Total count (19 asthma codes exist)
+            ["J45.901", "J45.40", "J45.41", "J45.50", "J45.51", "J45.20", "J45.21"],
             None,
             [
-                ["E11.9", "Type 2 diabetes mellitus without complications"],
-                ["E11.65", "Type 2 diabetes mellitus with hyperglycemia"]
+                ["J45.901", "Unspecified asthma with (acute) exacerbation"],
+                ["J45.40", "Moderate persistent asthma, uncomplicated"],
+                ["J45.41", "Moderate persistent asthma with (acute) exacerbation"],
+                ["J45.50", "Severe persistent asthma, uncomplicated"],
+                ["J45.51", "Severe persistent asthma with (acute) exacerbation"],
+                ["J45.20", "Mild intermittent asthma, uncomplicated"],
+                ["J45.21", "Mild intermittent asthma with (acute) exacerbation"]
             ]
         ]
         mock_response.raise_for_status = Mock()
         mock_client.get.return_value = mock_response
         
+        # Mock LLM response selecting the best code
+        mock_llm_client = Mock()
+        mock_llm_response = Mock()
+        mock_llm_response.choices = [Mock(message=Mock(content="J45.901"))]
+        mock_llm_client.chat.completions.create.return_value = mock_llm_response
+        mock_openai_class.return_value = mock_llm_client
+        
         # Test the function
-        result = await lookup_icd10_code_func("type 2 diabetes")
+        result = await lookup_icd10_code_func(
+            detailed_term="Asthma exacerbation (likely viral-triggered)",
+            simplified_term="asthma"
+        )
         
         # Assertions
-        assert result["code"] == "E11.9"
-        assert "Type 2 diabetes" in result["description"]
-        assert result["confidence"] in ["exact", "high"]
+        assert result["code"] == "J45.901"
+        assert "exacerbation" in result["description"].lower()
+        assert result["confidence"] == "high"
+        assert result["total_matches"] == 19
+        assert len(result["all_codes"]) == 7  # API returned 7 codes
         
-        # Verify API was called with correct parameters
-        mock_client.get.assert_called_once()
-        call_args = mock_client.get.call_args
-        assert "clinicaltables.nlm.nih.gov" in str(call_args)
+        # Verify LLM was called for selection
+        mock_llm_client.chat.completions.create.assert_called_once()
+        llm_call_args = mock_llm_client.chat.completions.create.call_args
+        assert "Asthma exacerbation" in str(llm_call_args)  # Detailed term passed to LLM
     
     @pytest.mark.asyncio
     @patch('httpx.AsyncClient')
@@ -71,11 +126,16 @@ class TestICD10Lookup:
         mock_client.get.return_value = mock_response
         
         # Test the function
-        result = await lookup_icd10_code_func("nonexistent condition xyz")
+        result = await lookup_icd10_code_func(
+            detailed_term="Nonexistent condition XYZ-123",
+            simplified_term="nonexistent condition"
+        )
         
         # Should return None/empty with confidence "none"
         assert result["code"] is None
         assert result["confidence"] == "none"
+        assert result["total_matches"] == 0
+        assert result["all_codes"] == []
     
     @pytest.mark.asyncio
     @patch('httpx.AsyncClient')
@@ -87,13 +147,17 @@ class TestICD10Lookup:
         mock_client.get.side_effect = Exception("API connection failed")
         
         # Test the function
-        result = await lookup_icd10_code_func("hypertension")
+        result = await lookup_icd10_code_func(
+            detailed_term="Essential hypertension",
+            simplified_term="hypertension"
+        )
         
         # Should return error information, not crash
         assert isinstance(result, dict)
         assert result["code"] is None
         assert result["confidence"] == "none"
         assert "error" in result
+        assert result["total_matches"] == 0
 
 
 class TestRxNormLookup:
@@ -247,38 +311,15 @@ class TestICD10LookupEdgeCases:
         mock_response.raise_for_status = Mock()
         mock_client.get.return_value = mock_response
         
-        result = await lookup_icd10_code_func("")
+        result = await lookup_icd10_code_func(
+            detailed_term="",
+            simplified_term=""
+        )
         
         assert result["code"] is None
         assert result["confidence"] == "none"
-    
-    @pytest.mark.asyncio
-    @patch('httpx.AsyncClient')
-    async def test_icd10_multiple_results(self, mock_client_class):
-        """Test ICD-10 lookup returns first result when multiple matches."""
-        mock_client = AsyncMock()
-        mock_client_class.return_value.__aenter__.return_value = mock_client
-        
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = [
-            3,  # Multiple results
-            ["I10", "I11.0", "I11.9"],
-            None,
-            [
-                ["I10", "Essential (primary) hypertension"],
-                ["I11.0", "Hypertensive heart disease with heart failure"],
-                ["I11.9", "Hypertensive heart disease without heart failure"]
-            ]
-        ]
-        mock_response.raise_for_status = Mock()
-        mock_client.get.return_value = mock_response
-        
-        result = await lookup_icd10_code_func("hypertension")
-        
-        # Should return first result
-        assert result["code"] == "I10"
-        assert "Essential" in result["description"]
+        assert result["total_matches"] == 0
+        assert result["all_codes"] == []
 
 
 class TestRxNormLookupEdgeCases:

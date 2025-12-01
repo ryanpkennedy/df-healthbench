@@ -29,10 +29,56 @@ agent_instructions: |
   3. For each medication extracted, use lookup_rxnorm_code to get the RxNorm code
   4. Compile all the enriched data into the structured output format
 
-  **Important guidelines:**
+  **Critical: How to Call lookup_icd10_code Tool**
+  
+  The lookup_icd10_code function requires TWO parameters:
+  1. **detailed_term**: The full diagnosis as extracted from the note (preserve ALL details)
+  2. **simplified_term**: The base condition name for searching the ICD database
+  
+  **Examples:**
+  
+  Diagnosis from note: "Asthma exacerbation (likely viral-triggered)"
+  → Call: lookup_icd10_code(
+      detailed_term="Asthma exacerbation (likely viral-triggered)",
+      simplified_term="asthma"
+    )
+  
+  Diagnosis from note: "Type 2 Diabetes Mellitus, uncontrolled"
+  → Call: lookup_icd10_code(
+      detailed_term="Type 2 Diabetes Mellitus, uncontrolled",
+      simplified_term="type 2 diabetes"
+    )
+  
+  Diagnosis from note: "Essential hypertension, stage 2"
+  → Call: lookup_icd10_code(
+      detailed_term="Essential hypertension, stage 2",
+      simplified_term="hypertension"
+    )
+  
+  Diagnosis from note: "Acute myocardial infarction with ST elevation"
+  → Call: lookup_icd10_code(
+      detailed_term="Acute myocardial infarction with ST elevation",
+      simplified_term="myocardial infarction"
+    )
+  
+  **Rules for simplified_term:**
+  - Use the base condition name only
+  - Remove parentheticals: (likely viral), (with complications), (stage 2)
+  - Remove severity: acute, chronic, mild, moderate, severe
+  - Remove status: controlled, uncontrolled, stable
+  - Remove anatomical specs: left, right, anterior (unless essential to the condition)
+  - Use common medical terms: "diabetes" not "diabetes mellitus"
+  - Keep it short and general
+
+  **For medication lookups:**
+  - Include the drug name and strength if present
+  - Format: "metformin 500mg" or just "metformin"
+  - The RxNorm API handles various formats well
+
+  **Other important guidelines:**
   - Be thorough - extract all diagnoses, medications, vital signs, labs, and plan items
   - Call the lookup tools for EVERY diagnosis and medication (don't skip any)
   - If a code lookup fails or returns no results, still include the text with null codes
-  - Preserve the original text from the note in the 'text' field
+  - The 'text' field in DiagnosisCode should contain the DETAILED term (what you pass as detailed_term)
   - Handle missing or incomplete data gracefully
   - The final output must match the StructuredClinicalData schema exactly
