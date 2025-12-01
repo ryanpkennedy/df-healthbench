@@ -1,4 +1,4 @@
-.PHONY: help build up down restart logs logs-backend logs-db ps clean test dev-up dev-down db-start db-stop db-restart db-logs db-clean
+.PHONY: help build up down restart logs logs-backend logs-db ps clean test test-fast test-unit fresh-start dev-up dev-down db-start db-stop db-restart db-logs db-clean
 
 # Default target - show help
 .DEFAULT_GOAL := help
@@ -16,11 +16,16 @@ help:
 	@echo "  make logs-db        - View database logs only"
 	@echo "  make ps             - Show service status"
 	@echo "  make clean          - Stop services and remove volumes (⚠️  destroys data)"
+	@echo "  make fresh-start    - Complete reset: down + rebuild + start (⚠️  destroys data)"
 	@echo ""
 	@echo "Development Commands:"
 	@echo "  make dev-up         - Start development environment with hot-reload"
 	@echo "  make dev-down       - Stop development environment"
-	@echo "  make test           - Run backend tests"
+	@echo ""
+	@echo "Testing Commands:"
+	@echo "  make test           - Run full pytest test suite (~10-15 min)"
+	@echo "  make test-fast      - Run fast tests only (skip slow LLM calls)"
+	@echo "  make test-unit      - Run unit tests only (no DB/API required)"
 	@echo ""
 	@echo "Database Commands:"
 	@echo "  make db-start       - Start database only"
@@ -59,6 +64,18 @@ clean:
 	@read -p "Are you sure? (yes/no): " confirm && [ "$$confirm" = "yes" ]
 	docker-compose down -v
 
+fresh-start:
+	@echo "🔄 Complete reset: down + rebuild + start"
+	@echo "⚠️  WARNING: This will destroy all application data!"
+	@read -p "Are you sure? (yes/no): " confirm && [ "$$confirm" = "yes" ]
+	@echo "📦 Stopping all services and removing volumes..."
+	docker-compose down -v
+	@echo "🔨 Rebuilding images..."
+	docker-compose build
+	@echo "🚀 Starting services..."
+	docker-compose up -d
+	@echo "✅ Fresh start complete! Check logs: make logs"
+
 # Development Environment (with hot-reload)
 dev-up:
 	docker-compose -f docker-compose.yml -f docker-compose.dev.yml up -d
@@ -66,9 +83,18 @@ dev-up:
 dev-down:
 	docker-compose -f docker-compose.yml -f docker-compose.dev.yml down
 
-# Testing
+# Testing Commands
 test:
-	cd backend && poetry run pytest
+	@echo "🧪 Running full pytest test suite..."
+	cd backend && poetry run pytest -v
+
+test-fast:
+	@echo "⚡ Running fast tests only (skipping slow LLM calls)..."
+	cd backend && poetry run pytest -m "not slow" -v
+
+test-unit:
+	@echo "🎯 Running unit tests only (no DB/API required)..."
+	cd backend && poetry run pytest -m unit -v
 
 # Database Commands (kept for backwards compatibility)
 db-start:
