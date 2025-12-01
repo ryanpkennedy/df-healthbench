@@ -83,7 +83,8 @@ backend/
 │   │
 │   ├── models/                 # SQLAlchemy ORM models
 │   │   ├── document.py         # Document table model
-│   │   └── document_embedding.py  # Embedding table model (PGVector)
+│   │   ├── document_embedding.py  # Embedding table model (PGVector)
+│   │   └── document_summary.py # Summary cache table model
 │   │
 │   ├── schemas/                # Pydantic validation schemas
 │   │   ├── document.py         # Document request/response schemas
@@ -94,7 +95,8 @@ backend/
 │   │
 │   ├── crud/                   # Database operations
 │   │   ├── document.py         # Document CRUD queries
-│   │   └── embedding.py        # Embedding CRUD + vector search
+│   │   ├── embedding.py        # Embedding CRUD + vector search
+│   │   └── document_summary.py # Summary cache CRUD operations
 │   │
 │   ├── services/               # Business logic
 │   │   ├── document.py         # Document service layer
@@ -216,6 +218,32 @@ Stores vector embeddings for RAG (Retrieval-Augmented Generation)
 
 - Uses PGVector's cosine distance operator (`<=>`)
 - 1536 dimensions (text-embedding-3-small model)
+
+#### `document_summary` Table
+
+Stores cached LLM-generated summaries to avoid redundant API calls
+
+|| Column        | Type                   | Description                         |
+|| ------------- | ---------------------- | ----------------------------------- |
+|| `id`          | INTEGER (PK, auto-inc) | Unique summary identifier           |
+|| `document_id` | INTEGER (FK), NOT NULL | Reference to documents table        |
+|| `summary_text`| TEXT, NOT NULL         | Cached LLM-generated summary        |
+|| `model_used`  | VARCHAR(50)            | LLM model used (e.g., 'gpt-5-nano') |
+|| `token_usage` | JSON                   | Token usage statistics              |
+|| `created_at`  | TIMESTAMP WITH TZ      | Summary creation timestamp          |
+|| `updated_at`  | TIMESTAMP WITH TZ      | Last summary update timestamp       |
+
+**Indexes:**
+
+- Primary key on `id`
+- Foreign key on `document_id` (CASCADE delete)
+- Unique constraint on `document_id` (one summary per document)
+
+**Cache Validation:**
+
+- Summary is valid when `summary.updated_at >= document.updated_at`
+- Updating a document invalidates its cached summary
+- Cache miss or stale cache triggers new LLM generation
 
 ### Seeding
 
@@ -377,9 +405,40 @@ Summarize medical note text using LLM.
 POST /llm/summarize_document/{document_id}
 ```
 
-Fetch a document from the database and summarize it.
+Fetch a document from the database and summarize it with intelligent caching.
 
-**Response:** Same as `/llm/summarize_note`
+**Caching Behavior:**
+
+This endpoint implements automatic caching to avoid redundant LLM API calls:
+
+- **First request:** Generates summary via LLM, stores in cache, returns with `from_cache: false`
+- **Subsequent requests:** Returns cached summary instantly with `from_cache: true`
+- **Cache invalidation:** Updating the document automatically invalidates the cache
+- **Performance:** Cached responses return in ~0ms vs normal LLM latency (1-5 seconds)
+
+**Response:**
+
+```json
+{
+  "summary": "**Chief Complaint:** 45-year-old male with chest pain...",
+  "model_used": "gpt-5-nano",
+  "token_usage": {
+    "prompt_tokens": 150,
+    "completion_tokens": 80,
+    "total_tokens": 230
+  },
+  "processing_time_ms": 1234,
+  "from_cache": false
+}
+```
+
+**Response Fields:**
+
+- `summary`: The generated medical note summary
+- `model_used`: LLM model used for generation
+- `token_usage`: Token statistics for cost tracking
+- `processing_time_ms`: Processing time (0 for cached results)
+- `from_cache`: Boolean indicating if result was retrieved from cache
 
 **Status Codes:**
 
@@ -1016,6 +1075,8 @@ See `tests/README_TESTS.md` for detailed testing documentation.
 - [x] LLM service layer with singleton pattern
 - [x] Medical note summarization endpoint
 - [x] Document summarization by ID endpoint
+- [x] Intelligent caching for document summaries (avoids redundant LLM calls)
+- [x] Cache invalidation on document updates
 - [x] Token usage tracking
 - [x] Request/response logging
 - [x] Comprehensive error handling (rate limits, timeouts, etc.)

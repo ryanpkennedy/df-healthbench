@@ -8,12 +8,13 @@ validation, error handling, and complex workflows.
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 
 from app.models.document import Document
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse, DocumentListResponse
 from app.crud import document as document_crud
+from app.crud import document_summary as summary_crud
 
 
 logger = logging.getLogger(__name__)
@@ -282,4 +283,103 @@ class DocumentService:
             logger.error(f"Unexpected error while deleting document {document_id}: {e}")
             db.rollback()
             raise
+    
+    @staticmethod
+    def check_summary_cache(db: Session, document_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Check if a valid cached summary exists for a document.
+        
+        A cached summary is valid if it was created/updated AFTER the document's
+        last update timestamp, meaning the summary reflects the current document version.
+        
+        Args:
+            db: Database session
+            document_id: ID of the document
+            
+        Returns:
+            Dictionary with cached summary data if valid cache exists, None otherwise.
+            Returns: {
+                "summary_text": str,
+                "model_used": str,
+                "token_usage": dict,
+                "from_cache": True
+            }
+        """
+        try:
+            # Fetch document
+            document = document_crud.get_document(db, document_id)
+            if not document:
+                logger.warning(f"Document {document_id} not found for cache check")
+                return None
+            
+            # Fetch cached summary
+            cached_summary = summary_crud.get_summary_by_document_id(db, document_id)
+            
+            if not cached_summary:
+                logger.info(f"No cached summary found for document {document_id}")
+                return None
+            
+            # Validate cache freshness: summary.updated_at must be >= document.updated_at
+            if cached_summary.updated_at >= document.updated_at:
+                logger.info(
+                    f"Valid cache found for document {document_id}: "
+                    f"summary_updated={cached_summary.updated_at}, "
+                    f"document_updated={document.updated_at}"
+                )
+                return {
+                    "summary_text": cached_summary.summary_text,
+                    "model_used": cached_summary.model_used,
+                    "token_usage": cached_summary.token_usage or {},
+                    "from_cache": True
+                }
+            else:
+                logger.info(
+                    f"Stale cache found for document {document_id}: "
+                    f"summary_updated={cached_summary.updated_at}, "
+                    f"document_updated={document.updated_at} - will regenerate"
+                )
+                return None
+                
+        except Exception as e:
+            logger.error(f"Error checking summary cache for document {document_id}: {e}")
+            return None
+    
+    @staticmethod
+    def save_summary_cache(
+        db: Session,
+        document_id: int,
+        summary_text: str,
+        model_used: str,
+        token_usage: Dict[str, Any]
+    ) -> bool:
+        """
+        Save or update a summary in the cache.
+        
+        Args:
+            db: Database session
+            document_id: ID of the document
+            summary_text: Generated summary text
+            model_used: LLM model used
+            token_usage: Token usage statistics
+            
+        Returns:
+            True if successfully saved, False otherwise
+        """
+        try:
+            logger.info(f"Saving summary cache for document {document_id}")
+            
+            summary_crud.create_or_update_summary(
+                db=db,
+                document_id=document_id,
+                summary_text=summary_text,
+                model_used=model_used,
+                token_usage=token_usage
+            )
+            
+            logger.info(f"Successfully saved summary cache for document {document_id}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving summary cache for document {document_id}: {e}")
+            return False
 

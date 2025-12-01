@@ -87,6 +87,11 @@ class SummarizeResponse(BaseModel):
         description="Processing time in milliseconds",
         examples=[1234]
     )
+    
+    from_cache: bool = Field(
+        default=False,
+        description="Whether this summary was retrieved from cache (True) or newly generated (False)"
+    )
 
 
 class ErrorResponse(BaseModel):

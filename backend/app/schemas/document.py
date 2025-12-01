@@ -102,3 +102,35 @@ class DocumentListResponse(BaseModel):
     )
     count: int = Field(..., description="Total number of documents")
 
+
+# Document Summary Schemas
+
+class DocumentSummaryBase(BaseModel):
+    """
+    Base schema for DocumentSummary with shared fields.
+    """
+    summary_text: str = Field(..., min_length=1, description="LLM-generated summary text")
+    model_used: Optional[str] = Field(None, description="LLM model used to generate summary")
+    token_usage: Optional[dict] = Field(None, description="Token usage statistics")
+
+
+class DocumentSummaryCreate(DocumentSummaryBase):
+    """
+    Schema for creating a new document summary (internal use).
+    """
+    document_id: int = Field(..., description="Document ID this summary belongs to")
+
+
+class DocumentSummaryResponse(DocumentSummaryBase):
+    """
+    Schema for document summary responses.
+    
+    Includes all fields plus id, document_id, and timestamps.
+    """
+    id: int = Field(..., description="Unique summary identifier")
+    document_id: int = Field(..., description="Document ID this summary belongs to")
+    created_at: datetime = Field(..., description="Summary creation timestamp")
+    updated_at: datetime = Field(..., description="Last update timestamp")
+    
+    model_config = ConfigDict(from_attributes=True)
+
