@@ -10,6 +10,8 @@ The easiest way to run the entire application is with the Make command or Docker
 
 Once the app is up and running, then `make test` will run the full pytest test suite. A more granular approach is shown below. Currently, the pytest suite is only set up to run locally (not in the Docker container). So you will need to run `poetry install` in the `/backend` folder to install the poetry environment with pytest.
 
+To manually test endpoints, just visit <http://localhost:8000/docs> once the app is up and running.
+
 #### 1. Ensure Docker and Docker Compose are installed
 
 ```bash
