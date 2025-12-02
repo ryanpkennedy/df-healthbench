@@ -71,7 +71,7 @@ fresh-start:
 	@echo "📦 Stopping all services and removing volumes..."
 	docker-compose down -v
 	@echo "🔨 Rebuilding images..."
-	docker-compose build
+	docker-compose build --no-cache
 	@echo "🚀 Starting services..."
 	docker-compose up -d
 	@echo "✅ Fresh start complete! Check logs: make logs"
