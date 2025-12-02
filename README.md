@@ -6,7 +6,7 @@ To view a quick summary of all of the project tasks that were complete, refer to
 
 ## Quick Start with Docker
 
-The easiest way to run the entire application is with the Make command or Docker Compose. Make sure .env is ready to go then simply run `make fresh-start` to start the backend, db and seed the db. If you ever want to reset the db, and have a clean start with the app, you can rerun `make fresh-start`. 
+The easiest way to run the entire application is with the Make command or Docker Compose. Make sure `backend/.env` (see Environment Variable Setup below) is ready to go then simply run `make fresh-start` to start the backend, db and seed the db. If you ever want to reset the db, and have a clean start with the app, you can rerun `make fresh-start`. 
 
 Once the app is up and running, then `make test` will run the full pytest test suite. A more granular approach is shown below.
 
