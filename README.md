@@ -428,4 +428,3 @@ docker-compose logs postgres
 - **Backend API:** See `backend/README.md` for comprehensive backend documentation
 - **API Reference:** http://localhost:8000/docs (when running)
 - **Sprint Plans:** See `backend/sprints/` for detailed implementation plans
-- **Project Overview:** See `project_overview.md` for assignment details
